@@ -1,0 +1,18 @@
+App Idea Brainstorming: "PlantPal"
+
+Concept: An app that helps people take care of their houseplants.
+
+Features:
+- Image recognition to identify the plant species.
+- Watering schedule push notifications.
+- "Sickness" identifier (users upload a photo of yellowing leaves, app suggests what's wrong).
+- Community forum to trade cuttings.
+
+Monetization:
+- Freemium model (basic watering reminders free, sickness identifier is $2.99/mo).
+- Ads for local nurseries.
+
+Competitors:
+- Planta
+- PictureThis
+Note: We need a better UI than competitors. Keep it minimal and green.
