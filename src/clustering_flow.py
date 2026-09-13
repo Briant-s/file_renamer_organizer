@@ -18,8 +18,8 @@ def embedding_prep(raw_data_list: list[dict]) -> list[dict]:
     pre_embed = [
         {
             "file_name": item["file_name"],
-            "content": item["content"]
-            
+            "stem": item.get("stem", item["file_name"]),  # kept for binary fallback
+            "content": item["content"],
         }
         for item in raw_data_list
     ]
@@ -42,7 +42,12 @@ def batch_encode(model: SentenceTransformer, folder_labels: list[str], pre_embed
     folder_embeddings = model.encode(expanded_labels, convert_to_tensor=True)
     
     # 2. Embed file contents
-    texts = [f["content"][:1000] for f in pre_embed]
+    # For binary/unreadable files, fall back to the filename stem as the semantic signal
+    # (e.g. "vacation_beach.jpg" -> "vacation_beach", "invoice_2024.pdf" -> "invoice_2024")
+    texts = [
+        (f["content"][:1000] if f.get("content") else f.get("stem", f["file_name"]))
+        for f in pre_embed
+    ]
     file_embeddings = model.encode(texts, convert_to_tensor=True, batch_size=32, show_progress_bar=True)
      
     # 3. Create cosine similarity matrix and normalize if needed

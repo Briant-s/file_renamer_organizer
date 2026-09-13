@@ -1,0 +1,17 @@
+CS 301 - Algorithm Design & Analysis
+Reminder: Midterm Exam
+
+The midterm exam for CS 301 will be held on Thursday, October 22, 2026,
+from 6:00 PM to 8:00 PM in Hall B, Engineering Building.
+
+Topics covered:
+- Big-O, Big-Theta, Big-Omega notation
+- Divide and conquer algorithms
+- Dynamic programming
+- Graph traversal (BFS/DFS)
+- Master Theorem
+
+Bring a valid student ID and one double-sided page of handwritten notes.
+No calculators or electronic devices are permitted.
+
+Office hours before the exam: Tuesday, October 20, 2026, 2:00-4:00 PM.

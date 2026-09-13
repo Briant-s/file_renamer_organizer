@@ -1,3 +1,8 @@
+import warnings
+import os
+warnings.filterwarnings("ignore")
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 from pathlib import Path
 from datetime import datetime
 
@@ -7,27 +12,42 @@ from src.utils.renamer import *
 from src.clustering_flow import *
 from src.ai.model import *
 
-from simple_term_menu import TerminalMenu
+from src.pipeline.no_clustering import no_clustering_pipeline
 
+import questionary
+from rich.console import Console
 
-DIR_PATH = '/home/briant_s/Documents/Code/semester_5/Venture/file_renamer/testing_dir1'
+DIR_PATH1 = '/home/briant_s/Documents/Code/semester_5/Venture/file_renamer/testing_dir1'
 
 
 def main() -> None:
-    # Loading models
-    model = load_embedder_model()
+    # rich ui
+    console = Console()
     
-    # Menu
-    options = ["[0] Renamer", "[1] Folder Clustering"]
-    main_menu = TerminalMenu(options)
-    main_index = main_menu.show()
-    print(f"You've Selected {main_index}!")
+    # Ask for working dir
+    DIR_PATH = questionary.path(
+        "Enter folder path to organize (tab for autocomplete) >> "
+    ).ask()
+    
+    # Loading models
+    with console.status("Loading embedder model..."):
+        model = load_embedder_model()
     
     # Prerequisites
-    current_files = extract_contents(DIR_PATH)
+    current_files = extract_contents(DIR_PATH1)
     
+    # Menu
+    choice = questionary.select(
+        "Menu List",
+        choices=[
+            "Renaming Only",
+            "With Folder Organizer"
+        ]
+    ).ask()
     
-    if main_index == 1:
+    if choice == "Renaming Only":
+        no_clustering_pipeline(DIR_PATH)
+    elif choice == "With Folder Organizer":
         clustering_flow(model=model, raw_data=current_files)
         
         
@@ -40,5 +60,4 @@ def main() -> None:
     
 
 if __name__ == "__main__":
-
     main()
