@@ -4,7 +4,37 @@ __pycache__/
 build/
 dist/
 wheels/
-*.egg-info
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
 
 # Virtual environments
-.venv
+.venv/
+venv/
+env/
+
+# Secrets & environment config
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+secrets.*
+
+# Generated test data / tool output (throwaway, not tracked)
+copy_testing/
+testing_dir1/
+
+# Model/cache artifacts (large, machine-specific)
+.cache/
+*.safetensors
+*.bin
+*.pt
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -7,7 +7,6 @@ requires-python = ">=3.13"
 dependencies = [
     "docx2txt>=0.9",
     "huggingface-hub>=1.30.0",
-    "llama-cpp-python==0.1.9",
     "ollama>=0.6.2",
     "openpyxl>=3.1.5",
     "pathlib>=1.0.1",
@@ -16,4 +15,20 @@ dependencies = [
     "questionary>=2.1.1",
     "rich>=15.0.0",
     "sentence-transformers>=6.0.1",
+    "torch>=2.4",
 ]
+
+# Default: CPU wheels everywhere. Safe on AMD, NVIDIA-without-setup, and mac (MPS ships in the CPU wheel).
+# NVIDIA users can opt into CUDA by pointing torch at the pytorch-cu124 index.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true

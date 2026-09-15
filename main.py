@@ -17,8 +17,6 @@ from src.pipeline.no_clustering import no_clustering_pipeline
 import questionary
 from rich.console import Console
 
-DIR_PATH1 = '/home/briant_s/Documents/Code/semester_5/Venture/file_renamer/testing_dir1'
-
 
 def main() -> None:
     # rich ui
@@ -34,7 +32,7 @@ def main() -> None:
         model = load_embedder_model()
     
     # Prerequisites
-    current_files = extract_contents(DIR_PATH1)
+    current_files = extract_contents(DIR_PATH)
     
     # Menu
     choice = questionary.select(

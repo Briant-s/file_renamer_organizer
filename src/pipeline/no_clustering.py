@@ -46,14 +46,14 @@ def no_clustering_pipeline(dir_path: str):
         choices=action_options
     ).ask()
     
-    if action == "Cancel":
+    if user_actions == "Cancel":
         print("No changes were made.")
         return
-    elif action == "Accept All":
+    elif user_actions == "Accept All":
         renamed, skipped, failed = rename_flow(raw_files, new_names)
         show_rename_results(renamed, skipped, failed)
         return
-    elif action == "Individual Edit":
+    elif user_actions == "Individual Edit":
         pass
     
         

@@ -18,7 +18,7 @@ def ask_rename_option() -> bool:
         return choice
 
 
-def rename(old: str, new:str, testing_dir: str = "copy_testing") -> tuple[str, bool]:
+def rename(old: str, new:str, testing_dir: str = "copy_testing") -> tuple[str, str]:
     # Turn into Path objects
     source = Path(old)
     dest_folder = Path(testing_dir)
@@ -29,20 +29,18 @@ def rename(old: str, new:str, testing_dir: str = "copy_testing") -> tuple[str, b
     target = dest_folder / f"{new}{extension}"
     
     if target.exists():
-        return False, f"ERROR! File named '{target.name} already exists in '{dest_folder}'"
+        return "skipped", f"ERROR! File named '{target.name} already exists in '{dest_folder}'"
     
     
     try:
         shutil.copy2(source, target)
-        return True, target.name
+        return "success", target.name
     except FileNotFoundError:
-            return False, f"ERROR! Source file doesn't exists"
-    except FileExistsError:
-            return False, f"ERROR! A file named '{new}' already exists"
+            return "false", f"ERROR! Source file doesn't exists"
     except PermissionError:
-            return False, "ERROR! Insuficcient permisions to rename this file"
+            return "false", "ERROR! Insuficcient permisions to rename this file"
     except OSError as e:
-            return False, f"Operating System Error Occured: {e}"
+            return "false", f"Operating System Error Occured: {e}"
 
 def show_rename_results(renamed, skipped, failed) -> None:
         console = Console()
@@ -61,13 +59,15 @@ def show_rename_results(renamed, skipped, failed) -> None:
         
         console.print(table)
         console.print(
-                f"\n[green]{len(renamed)} successfully renamed[/green], "
-                f"\n[yellow]{len(skipped)} skipped, "
-                f"\n[red]{len(failed)}[/red]."
+                f"\n[green]{len(renamed)} files renamed[/green], "
+                f"\n[yellow]{len(skipped)} files skipped, "
+                f"\n[red]{len(failed)} files failed[/red]."
         )
 
 def rename_flow(original_files, new_names):
-        renamed = skipped = failed = []
+        renamed = []
+        skipped = []
+        failed = []
         
         for f, new_name in zip(original_files, new_names):
                 old_name = f["file_name"]
@@ -80,8 +80,10 @@ def rename_flow(original_files, new_names):
                 
                 success, reason = rename(f["path"], new_name)
                 
-                if success:
+                if success == "success":
                         renamed.append((old_name, reason))
+                elif success == "skipped":
+                        skipped.append((old_name, reason))
                 else:
                         failed.append((old_name, reason))
         

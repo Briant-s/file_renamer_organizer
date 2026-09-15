@@ -32,6 +32,17 @@ def zscore_normalize(matrix):
     return (matrix - mean) / std_dev
 
 def batch_encode(model: SentenceTransformer, folder_labels: list[str], pre_embed: list[dict]):
+    # Guard: encoding an empty batch returns a zero-width tensor, so cos_sim crashes with
+    # "mat1 and mat2 shapes cannot be multiplied (1x0 and 384xN)". Bail out early instead.
+    if not pre_embed:
+        print("No files to classify.")
+        return []
+    if not folder_labels:
+        print("No folder labels provided; nothing to classify against.")
+        for f in pre_embed:
+            f["matching_folder"] = None
+        return pre_embed
+
     # 0. Get sample context of the working directory
     sample_context = build_text_samples(files=pre_embed)
     
@@ -43,11 +54,15 @@ def batch_encode(model: SentenceTransformer, folder_labels: list[str], pre_embed
     
     # 2. Embed file contents
     # For binary/unreadable files, fall back to the filename stem as the semantic signal
-    # (e.g. "vacation_beach.jpg" -> "vacation_beach", "invoice_2024.pdf" -> "invoice_2024")
-    texts = [
-        (f["content"][:1000] if f.get("content") else f.get("stem", f["file_name"]))
-        for f in pre_embed
-    ]
+    # (e.g. "vacation_beach.jpg" -> "vacation_beach", "invoice_2024.pdf" -> "invoice_2024").
+    # Every text must be non-empty so a single file never produces a zero-width embedding.
+    def _pick_text(f: dict) -> str:
+        for candidate in (f.get("content"), f.get("stem"), f.get("file_name")):
+            if candidate and candidate.strip():
+                return candidate.strip()[:1000]
+        return "unknown file"
+
+    texts = [_pick_text(f) for f in pre_embed]
     file_embeddings = model.encode(texts, convert_to_tensor=True, batch_size=32, show_progress_bar=True)
      
     # 3. Create cosine similarity matrix and normalize if needed
