@@ -1,4 +1,5 @@
 from src.utils.naming_formats import *
+from src.utils.renamer import *
 from src.ai.generator import *
 from src.utils.comparison import *
 from rich.progress import track
@@ -20,6 +21,7 @@ def get_new_names(raw_files: list[dict], formatter: callable, use_date: bool) ->
     
     return new_names
 
+
 def no_clustering_pipeline(dir_path: str):
     # 1. Read & extract files
     raw_files = extract_contents(dir_path)
@@ -38,7 +40,23 @@ def no_clustering_pipeline(dir_path: str):
     compare_results(old_names, new_names)
     
     # 6. Ask for confirmation from the user
+    action_options = ["Accept All", "Individual Edit", "Cancel"]
+    user_actions = questionary.select(
+        "Apply current renames?",
+        choices=action_options
+    ).ask()
     
+    if action == "Cancel":
+        print("No changes were made.")
+        return
+    elif action == "Accept All":
+        renamed, skipped, failed = rename_flow(raw_files, new_names)
+        show_rename_results(renamed, skipped, failed)
+        return
+    elif action == "Individual Edit":
+        pass
+    
+        
     
     
     
