@@ -48,7 +48,6 @@ def batch_encode(model: SentenceTransformer, folder_labels: list[str], pre_embed
     
     # 1. Expand the folder labels and then embed
     folder_map = {label: label_expander(label, sample_context) for label in folder_labels}
-    print(folder_map)
     expanded_labels = list(folder_map.values())
     folder_embeddings = model.encode(expanded_labels, convert_to_tensor=True)
     
@@ -98,8 +97,6 @@ def batch_encode(model: SentenceTransformer, folder_labels: list[str], pre_embed
         f["gap_z"] = top_z - second_z
         results.append(f)
         
-    
-    
     for f in results:
         print(f"{f["file_name"]}: {f["matching_folder"]} -> {f["top_score"]} | {f["second_score"]}")
     

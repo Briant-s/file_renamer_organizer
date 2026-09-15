@@ -12,7 +12,10 @@ from src.utils.renamer import *
 from src.clustering_flow import *
 from src.ai.model import *
 
+
+
 from src.pipeline.no_clustering import no_clustering_pipeline
+from src.pipeline.with_clustering import with_clustering_pipeline
 
 import questionary
 from rich.console import Console
@@ -46,7 +49,7 @@ def main() -> None:
     if choice == "Renaming Only":
         no_clustering_pipeline(DIR_PATH)
     elif choice == "With Folder Organizer":
-        clustering_flow(model=model, raw_data=current_files)
+        with_clustering_pipeline(DIR_PATH)
         
         
     
