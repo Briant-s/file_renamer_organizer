@@ -3,7 +3,8 @@ from src.utils.renamer import *
 from src.ai.generator import *
 from src.utils.comparison import *
 from rich.progress import track
-from src.extractors.metadata import extract_contents
+
+from src.utils.gui.prompts.rename import prompt_rename_option
 
 def get_old_names(raw_files: list[dict]) -> list[str]:
     old_names = []
@@ -22,14 +23,7 @@ def get_new_names(raw_files: list[dict], formatter: callable, use_date: bool) ->
     return new_names
 
 
-def no_clustering_pipeline(dir_path: str):
-    # 1. Read & extract files
-    raw_files = extract_contents(dir_path)
-    
-    # 2. Prompt for naming formats
-    label, formatter = prompt_naming_format()
-    use_date = "YYYY-MM-DD" in label
-    
+def renaming_pipeline(*, formatter: callable, use_date: bool, raw_files: list[dict]):
     # 3. Save for later comparison
     old_names = get_old_names(raw_files)
     
@@ -40,20 +34,16 @@ def no_clustering_pipeline(dir_path: str):
     compare_results(old_names, new_names)
     
     # 6. Ask for confirmation from the user
-    action_options = ["Accept All", "Individual Edit", "Cancel"]
-    user_actions = questionary.select(
-        "Apply current renames?",
-        choices=action_options
-    ).ask()
+    user_actions = prompt_rename_option(is_folder=False)
     
-    if user_actions == "Cancel":
+    if user_actions == "cancel":
         print("No changes were made.")
         return
-    elif user_actions == "Accept All":
+    elif user_actions == "accept":
         renamed, skipped, failed = rename_flow(raw_files, new_names)
         show_rename_results(renamed, skipped, failed)
         return
-    elif user_actions == "Individual Edit":
+    elif user_actions == "manual":
         pass
     
         

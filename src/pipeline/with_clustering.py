@@ -2,10 +2,14 @@ import questionary
 from rich.console import Console
 from rich.panel import Panel
 
-from src.extractors.metadata import extract_contents
-from src.ai.model import load_embedder_model
-from src.clustering_flow import batch_encode
+from src.classifiers import CLASSIFIERS
+from src.clustering_flow import embedding_prep
+from src.pipeline.confirmation import preview_folders
+from src.pipeline.no_clustering import get_new_names
 
+from src.utils.renamer import move_flow, show_rename_results
+from src.utils.naming_formats import prompt_naming_format
+from src.utils.gui.prompts.rename import prompt_rename_option, prompt_rename_or_move
 console = Console()
 
 def get_folder_names() -> list[str]:
@@ -62,13 +66,44 @@ def _validate_folder(text: str, existing: list[str]) -> bool | str:
     return True
 
 
-def with_clustering_pipeline(dir_path: str) -> None:
-    # 1. Read & extract files first
-    raw_files = extract_contents(dir_path)
+def with_clustering_pipeline(*, strat_choice, raw_files, folder_labels, res) -> None:
+    # 1. Prep dicts for classification
+    pre_embed = embedding_prep(raw_files)
+    
+    # 2. Build chosen classifier    
+    cls = CLASSIFIERS[strat_choice]
+    if strat_choice == "manual":
+        classifer = cls(model=res.embedder, folder_labels=folder_labels)
+    else:
+        classifer = cls()
 
-    # 2. Prompt user for folder names
-    folder_labels = get_folder_names()
+    # 3. Do classification
+    results = classifer.classify(pre_embed=pre_embed)
 
-    # 3. Load embedder and run classification
-    model = load_embedder_model()
-    return batch_encode(model=model, folder_labels=folder_labels, pre_embed=raw_files)
+    # 4. Preview tree
+    preview_folders(matching_results=results)
+    
+    # 5. Ask folder confirmation
+    user_actions = prompt_rename_option(is_folder=True)
+
+    if user_actions == "cancel":
+        console.print("No changes were made.")
+        return
+    elif user_actions == "manual":
+        # Interactive per-file editing not implemented yet.
+        console.print("[yellow]Individual edit not implemented yet.[/yellow]")
+        return
+
+    # 6. Decide whether to also rename, or just move under original names.
+    rename_too = prompt_rename_or_move()
+    if rename_too:
+        # Only prompt for a naming format when the user actually wants renames.
+        label, formatter = prompt_naming_format()
+        use_date = "YYYY-MM-DD" in label
+        new_names = get_new_names(results, formatter, use_date)
+    else:
+        new_names = [f["stem"] for f in results]
+
+    # 7. Move (and optionally rename) each file into its matching_folder.
+    renamed, skipped, failed = move_flow(results, new_names)
+    show_rename_results(renamed, skipped, failed)

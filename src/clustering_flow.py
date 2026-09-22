@@ -17,9 +17,12 @@ def get_folder_names() -> list[str]:
 def embedding_prep(raw_data_list: list[dict]) -> list[dict]:
     pre_embed = [
         {
+            "path": item["path"],                          # needed by place_file
             "file_name": item["file_name"],
             "stem": item.get("stem", item["file_name"]),  # kept for binary fallback
+            "file_type": item.get("file_type", ""),       # needed by FileTypeClassifier
             "content": item["content"],
+            "created_at": item.get("created_at"),          # needed for dated names
         }
         for item in raw_data_list
     ]

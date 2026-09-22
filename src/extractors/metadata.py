@@ -36,7 +36,7 @@ def _read_text_safe(entry: Path) -> tuple[str | None, bool]:
         return None, False
 
 
-def extract_contents(root_path: str) -> list[dict]:
+def extract_contents(*, root_path: str) -> list[dict]:
     root = Path(root_path)
     files_list = []
     
