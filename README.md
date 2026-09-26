@@ -2,11 +2,15 @@
 
 # TiFo
 
+<div align="center">
+  <img src="demo/tifo.gif" width="800">
+</div>
+
 **Rename and organize your files by their actual content — locally, privately, offline.**
 
 </div>
 
-TiFo is a command-line tool that reads what your files are *about* and gives them clean,
+TiFo is a command-line tool that reads what your files are _about_ and gives them clean,
 descriptive names, then sorts them into folders that make sense. It runs entirely on your
 machine using a local LLM (via [Ollama](https://ollama.com)) and local embeddings — no
 cloud, no API keys, nothing leaves your computer.
@@ -24,11 +28,11 @@ and get back `Weekly To-Do List.txt`, `Q3 Financial Summary.docx`, and a tidy fo
   specific title (e.g. `Grocery Shopping List`, not `Text Document`).
 - **Multi-format extraction** — plain text, Markdown, CSV, logs, PDF, Word (`.docx`), and Excel (`.xlsx`).
   Binary and unreadable files are handled gracefully.
-- **Two workflows** — rename files in place, or rename *and* organize them into folders.
+- **Two workflows** — rename files in place, or rename _and_ organize them into folders.
 - **Three folder strategies**:
-  - *Manual + semantic* — you name the folders, TiFo places files using embedding similarity.
-  - *By file type* — sorts into `Documents`, `Images`, `Spreadsheets`, `Code`, and more.
-  - *Auto organize* — planned, not yet available.
+  - _Manual + semantic_ — you name the folders, TiFo places files using embedding similarity.
+  - _By file type_ — sorts into `Documents`, `Images`, `Spreadsheets`, `Code`, and more.
+  - _Auto organize_ — planned, not yet available.
 - **Flexible naming formats** — `Title Case`, `snake_case`, `kebab-case`, `lowercase`,
   `UPPERCASE`, plus date-prefixed variants (`YYYY-MM-DD ...`).
 - **Preview before applying** — see a diff-style rename table or a folder tree, then accept or cancel.
@@ -100,8 +104,8 @@ Running the tool starts an interactive prompt:
 
 1. **Choose a folder** to organize (tab-completion supported).
 2. **Pick a mode**:
-   - *Rename Files Only* — clean up names, keep the folder layout.
-   - *Rename + Folder Organization* — also sort files into folders.
+   - _Rename Files Only_ — clean up names, keep the folder layout.
+   - _Rename + Folder Organization_ — also sort files into folders.
 3. **(Organize mode)** choose a folder strategy — manual names or by file type.
 4. **Choose a naming format** — e.g. `Title Case` or `snake_case`.
 5. **Review the preview** — a rename table or a folder tree.
@@ -137,13 +141,13 @@ Folder Organization Preview
 
 ## Supported file types
 
-| Category      | Extensions                                   | Extraction              |
-| ------------- | -------------------------------------------- | ----------------------- |
-| Text          | `.txt`, `.md`, `.csv`, `.log`, and other UTF-8 | direct read             |
-| PDF           | `.pdf`                                        | `pymupdf` text layer    |
-| Word          | `.docx`                                        | `docx2txt`              |
-| Spreadsheet   | `.xlsx`                                        | `openpyxl` cell values  |
-| Other/binary  | images, audio, video, archives, executables   | metadata + filename only |
+| Category     | Extensions                                     | Extraction               |
+| ------------ | ---------------------------------------------- | ------------------------ |
+| Text         | `.txt`, `.md`, `.csv`, `.log`, and other UTF-8 | direct read              |
+| PDF          | `.pdf`                                         | `pymupdf` text layer     |
+| Word         | `.docx`                                        | `docx2txt`               |
+| Spreadsheet  | `.xlsx`                                        | `openpyxl` cell values   |
+| Other/binary | images, audio, video, archives, executables    | metadata + filename only |
 
 > [!NOTE]
 > Files with no extractable text still get classified using their filename and metadata,
@@ -186,11 +190,11 @@ file_renamer/
 
 ## Tech stack
 
-| Layer        | Tool                                              |
-| ------------ | ------------------------------------------------- |
-| LLM backend  | Ollama + `llama3.2:3b`                             |
-| Embeddings   | `sentence-transformers` (`all-MiniLM-L6-v2`)      |
-| PDF / Word / Excel | `pymupdf`, `docx2txt`, `openpyxl`           |
-| CLI UI       | `questionary` + `rich`                            |
-| Compute      | `torch` (CPU by default, optional CUDA)           |
-| Tooling      | `uv`, Python 3.13+                                 |
+| Layer              | Tool                                         |
+| ------------------ | -------------------------------------------- |
+| LLM backend        | Ollama + `llama3.2:3b`                       |
+| Embeddings         | `sentence-transformers` (`all-MiniLM-L6-v2`) |
+| PDF / Word / Excel | `pymupdf`, `docx2txt`, `openpyxl`            |
+| CLI UI             | `questionary` + `rich`                       |
+| Compute            | `torch` (CPU by default, optional CUDA)      |
+| Tooling            | `uv`, Python 3.13+                           |

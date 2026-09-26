@@ -1,0 +1,3 @@
+Passwords
+router admin / hunter2
+wifi: cafe-guest

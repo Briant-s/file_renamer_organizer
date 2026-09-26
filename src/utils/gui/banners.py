@@ -40,6 +40,7 @@ def welcome_banner() -> None:
             expand=False,
         )
     )
+    console.file.flush()
 
 
 def renaming_banner(working_dir: str) -> None:
