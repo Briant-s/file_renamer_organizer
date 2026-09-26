@@ -26,9 +26,10 @@ secrets.*
 # Generated test data / tool output (throwaway, not tracked)
 copy_testing/
 testing_dir1/
-./kiro
+.kiro/
 DISTRIBUTION_STRATEGY.md
 SESSION.md
+markdowns/
 
 
 # Model/cache artifacts (large, machine-specific)
