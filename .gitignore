@@ -26,6 +26,7 @@ secrets.*
 # Generated test data / tool output (throwaway, not tracked)
 copy_testing/
 testing_dir1/
+demo/sample
 .kiro/
 DISTRIBUTION_STRATEGY.md
 SESSION.md
