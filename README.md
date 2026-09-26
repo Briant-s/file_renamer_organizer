@@ -1,192 +1,196 @@
-# AI File Renamer & Organizer
+<div align="center">
 
-A local, privacy-first CLI tool that uses a local LLM to automatically rename and organize files based on their actual content — no cloud, no API keys, runs on Windows, Linux, and macOS.
+# TiFo
 
----
+**Rename and organize your files by their actual content — locally, privately, offline.**
 
-## Goal
+</div>
 
-Given a folder of mixed files (documents, notes, spreadsheets, images, videos, PDFs, etc.), the tool should:
-1. Read and understand each file's content
-2. Suggest a clean, descriptive filename
-3. Classify the file into a user-defined folder
-4. Apply the changes — or preview them first and let the user confirm
+TiFo is a command-line tool that reads what your files are *about* and gives them clean,
+descriptive names, then sorts them into folders that make sense. It runs entirely on your
+machine using a local LLM (via [Ollama](https://ollama.com)) and local embeddings — no
+cloud, no API keys, nothing leaves your computer.
 
----
+Point it at a folder of messy files like `1.txt`, `report(final)(2).docx`, or `IMG_4821.pdf`,
+and get back `Weekly To-Do List.txt`, `Q3 Financial Summary.docx`, and a tidy folder tree.
 
-## Current State
+> [!NOTE]
+> TiFo works on **non-destructive copies by default** — your originals are never touched.
+> Organized files are written to a separate output directory so you can review before committing.
 
-- [x] Text file extraction (`src/extractors/metadata.py`)
-- [x] Folder classification via semantic embeddings (`src/clustering_flow.py`)
-- [x] Label expansion via local LLM — Ollama + llama3.2:1b (`src/ai/expand_label.py`)
-- [x] File renaming utility (`src/utils/renamer.py`)
-- [x] AI name generation for text files (`src/ai/generator.py`)
-- [x] Basic CLI menu (`main.py`)
-- [x] Safe handling of binary files (skips unreadable files gracefully)
+## Features
 
----
+- **Content-aware renaming** — extracts text from each file and asks a local LLM for a short,
+  specific title (e.g. `Grocery Shopping List`, not `Text Document`).
+- **Multi-format extraction** — plain text, Markdown, CSV, logs, PDF, Word (`.docx`), and Excel (`.xlsx`).
+  Binary and unreadable files are handled gracefully.
+- **Two workflows** — rename files in place, or rename *and* organize them into folders.
+- **Three folder strategies**:
+  - *Manual + semantic* — you name the folders, TiFo places files using embedding similarity.
+  - *By file type* — sorts into `Documents`, `Images`, `Spreadsheets`, `Code`, and more.
+  - *Auto organize* — planned, not yet available.
+- **Flexible naming formats** — `Title Case`, `snake_case`, `kebab-case`, `lowercase`,
+  `UPPERCASE`, plus date-prefixed variants (`YYYY-MM-DD ...`).
+- **Preview before applying** — see a diff-style rename table or a folder tree, then accept or cancel.
+- **Safe by design** — collision-safe deduplication, an explicit `Unsorted` bucket for
+  low-confidence matches, and path-escape guards.
+- **Cross-hardware** — CPU by default, with automatic fallback across CUDA → Apple MPS → CPU.
 
-## Roadmap
-
-### Phase 1 — Content Extraction (multi-file type support)
-The current extractor only handles plain text. Expand it to support all common file types.
-
-| File Type | Extraction Method | Library |
-|---|---|---|
-| `.txt`, `.md`, `.csv`, `.log` | Direct `read_text()` | stdlib |
-| `.pdf` | Extract text layer; fallback to OCR if scanned | `pymupdf` (fitz) |
-| `.docx` | Parse XML body text | `python-docx` |
-| `.xlsx`, `.csv` | Read cell values | `openpyxl`, stdlib |
-| `.pptx` | Extract slide text | `python-pptx` |
-| `.jpg`, `.png`, etc. | EXIF metadata + optional image captioning | `Pillow`, `exifread` |
-| `.mp4`, `.mkv`, etc. | Extract filename/metadata; optional audio transcription | `ffmpeg-python`, `whisper` |
-| `.mp3`, `.wav`, etc. | Optional audio transcription | `openai-whisper` (local) |
-
-Each extractor should return a normalized dict with at minimum:
-```python
-{
-    "content": str | None,   # extracted text
-    "summary": str | None,   # optional pre-summarized text for large files
-    "metadata": dict          # type-specific metadata (EXIF, duration, page count, etc.)
-}
-```
-
-Add each extractor as a separate file under `src/extractors/` (e.g. `pdf.py`, `docx.py`, `image.py`).
-
----
-
-### Phase 2 — Smarter Name Generation
-The current name generator does a single LLM call and returns a 2-word topic. Improve it:
-
-- For text-heavy files (docs, PDFs): summarize first, then derive a name from the summary
-- For binary files with no content: use filename stem + metadata (e.g. image dimensions, creation date)
-- Name format options: `snake_case`, `Title Case`, `kebab-case` — user configurable
-- Deduplication: if a generated name already exists in the folder, append a counter or date
-
----
-
-### Phase 3 — Improved Classification
-The current embedding-based classifier works but has a few weak spots to address:
-
-- **Threshold tuning**: the current z-score and raw cosine thresholds are hardcoded. Make them configurable or auto-tuned based on score distribution.
-- **Unclassified bucket**: files that score below threshold (currently `matching_folder = None`) should be surfaced to the user explicitly as "Unsorted" rather than silently dropped.
-- **Multi-label hint**: if the top-2 scores are very close, flag the file as ambiguous and let the user pick.
-- **Hybrid signal**: for binary files, combine filename stem embedding with any extracted metadata text.
-
----
-
-### Phase 4 — Preview & Confirmation UI
-Before applying any changes, show the user a diff-style preview:
+## How it works
 
 ```
-[Rename]   3.txt              →  Passwords & Credentials.txt
-[Move]     3.txt              →  Financial Files/
-[Rename]   1.txt              →  Weekly To-Do List.txt
-[Move]     1.txt              →  Household Chores/
-[UNSORTED] app_idea_notes.txt →  No confident match
+   folder of files
+        │
+        ▼
+  ┌───────────────┐    extract text from txt / md / csv / pdf / docx / xlsx
+  │  Extractors   │
+  └───────┬───────┘
+          │
+          ▼
+  ┌───────────────┐    local LLM (Ollama) suggests a short descriptive title
+  │  Name gen     │    per file, formatted to your chosen style
+  └───────┬───────┘
+          │
+          ▼
+  ┌───────────────┐    (organize mode) embed file content + folder labels,
+  │  Classifier   │    match via cosine similarity, gate by confidence
+  └───────┬───────┘
+          │
+          ▼
+  ┌───────────────┐    diff/tree preview → your confirmation → copy into place
+  │  Preview +    │
+  │  Apply        │
+  └───────────────┘
 ```
 
-Let the user:
-- Accept all
-- Reject all
-- Edit individual entries interactively
+- **Embeddings** use `sentence-transformers` with the `all-MiniLM-L6-v2` model.
+- **Naming and label expansion** use the `llama3.2:3b` model through Ollama.
+- For folder classification, labels are expanded into richer descriptions before embedding,
+  and low-confidence files (below threshold or with a close top-2 gap) are routed to `Unsorted`.
 
-The `simple-term-menu` library already in the project can power this.
+## Prerequisites
 
----
+- **Python 3.13+**
+- **[uv](https://docs.astral.sh/uv/)** for dependency management
+- **[Ollama](https://ollama.com)** installed and running
+- The `llama3.2:3b` model pulled locally
 
-### Phase 5 — Cross-Platform & Packaging
-Make the tool installable and runnable on Windows, Linux, and macOS.
+## Getting started
 
-- Replace `simple-term-menu` with a cross-platform alternative like `questionary` or `InquirerPy` — `simple-term-menu` does not work on Windows.
-- Add a `run.bat` and `run.sh` launcher for users who don't want to use `uv`/`pip` directly.
-- Package with `pyinstaller` or `uv` for single-file distribution if needed.
-- Test on Windows (PowerShell + CMD), macOS (zsh), Linux (bash).
+```bash
+# 1. Install dependencies (CPU wheels by default)
+uv sync
 
-> **Note:** Ollama itself is cross-platform and the setup is identical on all three OSes, so the LLM layer needs no changes.
+# 2. Pull the LLM model
+ollama pull llama3.2:3b
 
----
-
-### Phase 6 — Configuration File
-Add a `config.toml` or `.env` so users can set preferences without touching code:
-
-```toml
-[general]
-preview_before_apply = true
-naming_format = "Title Case"        # or "snake_case", "kebab-case"
-default_output_dir = ""             # empty = rename in-place
-
-[model]
-ollama_model = "llama3.2:1b"        # swap to llama3.1:8b for better quality
-embedder_model = "all-MiniLM-L6-v2"
-
-[classification]
-min_confidence = 0.15               # raw cosine threshold (small batch)
-min_z_score = 1.0                   # z-score threshold (large batch, 20+ files)
-min_gap = 0.05                      # min gap between top-2 scores
-
-[extractors]
-enable_ocr = false                  # requires tesseract installed
-enable_whisper = false              # audio/video transcription, slow on CPU
+# 3. Run
+uv run main.py
 ```
 
----
+On first run, the embedding model (~90 MB) is downloaded and cached automatically.
 
-## Tech Stack
+> [!TIP]
+> On NVIDIA hardware you can opt into CUDA wheels for faster embedding. The project defines a
+> `pytorch-cu124` index in `pyproject.toml` — point `torch` at it instead of the default CPU index.
 
-| Layer | Current | Planned additions |
-|---|---|---|
-| LLM backend | Ollama + llama3.2:1b | Configurable model (llama3.1:8b recommended for quality) |
-| Embeddings | `sentence-transformers` all-MiniLM-L6-v2 | Same — fast and accurate enough |
-| PDF extraction | — | `pymupdf` |
-| Word/Excel/PPT | — | `python-docx`, `openpyxl`, `python-pptx` |
-| Image metadata | — | `Pillow`, `exifread` |
-| Audio/video | — | `openai-whisper` (local), `ffmpeg-python` |
-| CLI UI | `simple-term-menu` | `questionary` or `InquirerPy` (Windows-compatible) |
-| Config | hardcoded | `tomllib` (stdlib in Python 3.11+) |
-| Packaging | `uv` | `pyinstaller` for distributable builds |
+## Usage
 
----
+Running the tool starts an interactive prompt:
 
-## Project Structure (target)
+1. **Choose a folder** to organize (tab-completion supported).
+2. **Pick a mode**:
+   - *Rename Files Only* — clean up names, keep the folder layout.
+   - *Rename + Folder Organization* — also sort files into folders.
+3. **(Organize mode)** choose a folder strategy — manual names or by file type.
+4. **Choose a naming format** — e.g. `Title Case` or `snake_case`.
+5. **Review the preview** — a rename table or a folder tree.
+6. **Confirm** — accept all, or cancel with no changes made.
+
+### Rename preview example
+
+```
+                 Rename Preview
+┌──────────────────┬───┬───────────────────────────┐
+│ Original         │   │ New Name                  │
+├──────────────────┼───┼───────────────────────────┤
+│ 3.txt            │ → │ Passwords & Credentials.txt│
+│ 1.txt            │ → │ Weekly To-Do List.txt     │
+│ 8.pdf            │ → │ Q3 Financial Summary.pdf  │
+└──────────────────┴───┴───────────────────────────┘
+```
+
+### Folder organization preview example
+
+```
+Folder Organization Preview
+├── Documents  (3)
+│   ├── Q3 Financial Summary.pdf
+│   ├── Meeting Notes.docx
+│   └── Project Plan.docx
+├── Spreadsheets  (2)
+│   ├── Budget 2026.xlsx
+│   └── Expenses.csv
+└── Unsorted  (1)
+    └── app_idea_notes.txt
+```
+
+## Supported file types
+
+| Category      | Extensions                                   | Extraction              |
+| ------------- | -------------------------------------------- | ----------------------- |
+| Text          | `.txt`, `.md`, `.csv`, `.log`, and other UTF-8 | direct read             |
+| PDF           | `.pdf`                                        | `pymupdf` text layer    |
+| Word          | `.docx`                                        | `docx2txt`              |
+| Spreadsheet   | `.xlsx`                                        | `openpyxl` cell values  |
+| Other/binary  | images, audio, video, archives, executables   | metadata + filename only |
+
+> [!NOTE]
+> Files with no extractable text still get classified using their filename and metadata,
+> so nothing is silently dropped.
+
+## Project structure
 
 ```
 file_renamer/
-├── main.py
-├── config.toml                   # user configuration
+├── main.py                     # interactive entry point
 ├── pyproject.toml
-├── src/
-│   ├── clustering_flow.py        # folder classification pipeline
-│   ├── ai/
-│   │   ├── model.py              # embedder loader
-│   │   ├── generator.py          # name generation
-│   │   ├── expand_label.py       # folder label expansion
-│   │   └── text_sampler.py       # sample builder for LLM context
-│   ├── extractors/
-│   │   ├── metadata.py           # file system metadata + plain text
-│   │   ├── pdf.py                # PDF text extraction
-│   │   ├── docx.py               # Word document extraction
-│   │   ├── spreadsheet.py        # Excel/CSV extraction
-│   │   ├── image.py              # EXIF + optional captioning
-│   │   └── audio_video.py        # Whisper transcription
-│   └── utils/
-│       ├── renamer.py            # file rename/move logic
-│       └── preview.py            # diff preview UI
+└── src/
+    ├── app.py                  # alternate app runner (banners, language, formats)
+    ├── clustering_flow.py      # embedding prep + similarity helpers
+    ├── ai/
+    │   ├── model.py            # embedder loader (device autodetect + fallback)
+    │   ├── generator.py        # LLM name generation
+    │   ├── expand_label.py     # folder-label expansion for better matching
+    │   └── text_sampler.py     # sample builder for LLM context
+    ├── classifiers/
+    │   ├── base.py             # Classifier interface
+    │   ├── manual.py           # semantic (embedding) classifier
+    │   └── file_type.py        # extension-based classifier
+    ├── extractors/
+    │   ├── metadata.py         # filesystem metadata + text reading
+    │   ├── pdf.py              # PDF extraction
+    │   ├── docx.py             # Word extraction
+    │   └── spreadsheet.py      # Excel extraction
+    ├── pipeline/
+    │   ├── no_clustering.py    # rename-only flow
+    │   ├── with_clustering.py  # rename + organize flow
+    │   ├── confirmation.py     # folder-tree preview
+    │   └── resources.py        # model/LLM warm-up
+    └── utils/
+        ├── renamer.py          # collision-safe copy/move/rename
+        ├── naming_formats.py   # naming-style formatters
+        ├── comparison.py       # rename diff table
+        └── gui/                # prompts, banners, reactions (rich + questionary)
 ```
 
----
+## Tech stack
 
-## Getting Started (current)
-
-**Prerequisites:** Python 3.13+, [Ollama](https://ollama.com) installed and running, `llama3.2:1b` pulled.
-
-```bash
-# Install dependencies
-uv sync
-
-# Pull the LLM model
-ollama pull llama3.2:1b
-
-# Run
-uv run main.py
-```
+| Layer        | Tool                                              |
+| ------------ | ------------------------------------------------- |
+| LLM backend  | Ollama + `llama3.2:3b`                             |
+| Embeddings   | `sentence-transformers` (`all-MiniLM-L6-v2`)      |
+| PDF / Word / Excel | `pymupdf`, `docx2txt`, `openpyxl`           |
+| CLI UI       | `questionary` + `rich`                            |
+| Compute      | `torch` (CPU by default, optional CUDA)           |
+| Tooling      | `uv`, Python 3.13+                                 |
