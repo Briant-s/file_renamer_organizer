@@ -1,10 +1,10 @@
-from src.utils.naming_formats import *
-from src.utils.renamer import *
-from src.ai.generator import *
-from src.utils.comparison import *
+from tifo.naming.formats import *
+from tifo.renaming.renamer import *
+from tifo.naming.generator import *
+from tifo.ui.display.preview import *
 from rich.progress import track
 
-from src.utils.gui.prompts.rename import prompt_rename_option
+from tifo.ui.prompts.rename import prompt_rename_option
 
 def get_old_names(raw_files: list[dict]) -> list[str]:
     old_names = []

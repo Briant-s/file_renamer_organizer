@@ -7,3 +7,8 @@ console = Console()
 def loading(message: str):
     with console.status(f"[cyan]{message}[/cyan]", spinner="dots"):
         yield
+
+def select_reaction(choice: str) -> None:
+    console.print(f" [green]✓[/green] {choice} selected ")
+    
+    

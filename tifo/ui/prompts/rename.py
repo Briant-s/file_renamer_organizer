@@ -1,7 +1,7 @@
 import questionary
 
-from src.utils.naming_formats import prompt_naming_format as _prompt_naming_format
-from src.utils.gui.reactions import select_reaction
+from tifo.naming.formats import prompt_naming_format as _prompt_naming_format
+from tifo.ui.display.feedback import select_reaction
 
 def prompt_naming_format():
     # Delegate to the canonical implementation (builds choices + returns the

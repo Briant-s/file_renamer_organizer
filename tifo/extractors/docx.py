@@ -1,6 +1,6 @@
 import docx2txt
 from pathlib import Path
-from src.extractors.models import ExtractedFile
+from tifo.extractors.models import ExtractedFile
 
 def extract_docx(file_path: Path) -> ExtractedFile:
     extracted_text = docx2txt.process(str(file_path))

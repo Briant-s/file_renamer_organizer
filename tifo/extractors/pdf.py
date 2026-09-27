@@ -1,6 +1,6 @@
 import pymupdf
 from pathlib import Path
-from src.extractors.models import ExtractedFile
+from tifo.extractors.models import ExtractedFile
 
 MAX_PAGES = 3
 

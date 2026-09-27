@@ -89,10 +89,36 @@ uv sync
 ollama pull llama3.2:3b
 
 # 3. Run
-uv run main.py
+uv run tifo
 ```
 
+Alternatively, install `tifo` as a standalone command you can run from anywhere:
+
+```bash
+uv tool install .
+```
+
+This puts a `tifo` executable on your `PATH` (e.g. `~/.local/bin/tifo`). After changing
+the source, reinstall with `uv tool install . --force` to pick up your changes.
+
 On first run, the embedding model (~90 MB) is downloaded and cached automatically.
+
+> [!IMPORTANT]
+> **TiFo runs fully offline by default.** On startup it sets `HF_HUB_OFFLINE` and
+> `TRANSFORMERS_OFFLINE`, so the embedding model is loaded straight from the local
+> HuggingFace cache with no network check on every run. This means the two assets it
+> needs must be present locally first:
+>
+> 1. The embedding model — cached automatically the first time you run TiFo _with_ a
+>    network connection, or seed it manually:
+>    ```bash
+>    HF_HUB_OFFLINE=0 uv run python -c \
+>      "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+>    ```
+> 2. The LLM — pulled once via `ollama pull llama3.2:3b`.
+>
+> Once both are local, TiFo needs no internet. If the embedding model is missing from the
+> cache, TiFo fails fast with an explicit message rather than hanging on a network call.
 
 > [!TIP]
 > On NVIDIA hardware you can opt into CUDA wheels for faster embedding. The project defines a
@@ -157,16 +183,20 @@ Folder Organization Preview
 
 ```
 file_renamer/
-├── main.py                     # interactive entry point
-├── pyproject.toml
-└── src/
-    ├── app.py                  # alternate app runner (banners, language, formats)
+├── main.py                     # thin launcher (delegates to tifo.app)
+├── pyproject.toml              # defines the `tifo` entry point
+└── tifo/
+    ├── app.py                  # interactive entry point (forces offline HF mode)
     ├── clustering_flow.py      # embedding prep + similarity helpers
-    ├── ai/
-    │   ├── model.py            # embedder loader (device autodetect + fallback)
-    │   ├── generator.py        # LLM name generation
+    ├── common/
+    │   └── paths.py            # shared path helpers
+    ├── embedding/
+    │   ├── model.py            # embedder loader (device autodetect, offline, fallback)
     │   ├── expand_label.py     # folder-label expansion for better matching
     │   └── text_sampler.py     # sample builder for LLM context
+    ├── naming/
+    │   ├── generator.py        # LLM name generation
+    │   └── formats.py          # naming-style formatters
     ├── classifiers/
     │   ├── base.py             # Classifier interface
     │   ├── manual.py           # semantic (embedding) classifier
@@ -181,11 +211,11 @@ file_renamer/
     │   ├── with_clustering.py  # rename + organize flow
     │   ├── confirmation.py     # folder-tree preview
     │   └── resources.py        # model/LLM warm-up
-    └── utils/
-        ├── renamer.py          # collision-safe copy/move/rename
-        ├── naming_formats.py   # naming-style formatters
-        ├── comparison.py       # rename diff table
-        └── gui/                # prompts, banners, reactions (rich + questionary)
+    ├── renaming/
+    │   └── renamer.py          # collision-safe copy/move/rename
+    └── ui/
+        ├── display/            # banners, previews, feedback (rich)
+        └── prompts/            # interactive prompts (questionary)
 ```
 
 ## Tech stack

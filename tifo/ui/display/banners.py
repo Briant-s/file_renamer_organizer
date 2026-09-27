@@ -5,7 +5,7 @@ from rich.table import Table
 from rich.text import Text
 from rich import box
 
-from src.utils.utils import display_path
+from tifo.common.paths import display_path
 
 console = Console()
 

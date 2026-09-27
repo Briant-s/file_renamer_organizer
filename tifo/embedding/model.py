@@ -31,7 +31,7 @@ def _try_load_on(device: str, status) -> "SentenceTransformer | None":
 
     try:
         status.update(f"[cyan]Loading weights onto {device}...[/cyan]")
-        model = SentenceTransformer(MODEL_NAME, device=device)
+        model = SentenceTransformer(MODEL_NAME, device=device, local_files_only=True)
 
         status.update(f"[cyan]Verifying {device} with a test encode...[/cyan]")
         _ = model.encode(["health check"], convert_to_tensor=True)
@@ -73,7 +73,17 @@ def load_embedder_model() -> "SentenceTransformer":
         candidates.append("cpu")
 
         if not _is_cached(MODEL_NAME):
-            status.update("[yellow]Downloading model (first run only, ~90MB)...[/yellow]")
+            # We run fully offline (HF_HUB_OFFLINE=1), so a missing cache cannot
+            # be recovered by downloading. Fail early with an actionable message
+            # instead of letting SentenceTransformer raise an opaque network error.
+            raise RuntimeError(
+                f"Embedding model '{MODEL_NAME}' is not in the local HuggingFace cache "
+                f"and TiFo runs offline. Pull it once while online with:\n\n"
+                f"    HF_HUB_OFFLINE=0 python -c "
+                f"\"from sentence_transformers import SentenceTransformer; "
+                f"SentenceTransformer('{MODEL_NAME}')\"\n\n"
+                f"After it is cached, TiFo will load it without any network access."
+            )
 
         for device in candidates:
             status.update(f"[cyan]Trying device: {device}...[/cyan]")

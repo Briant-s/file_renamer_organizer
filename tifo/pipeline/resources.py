@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from src.ai.model import load_embedder_model
-from src.utils.gui.loading import loading
+from tifo.embedding.model import load_embedder_model
+from tifo.ui.display.feedback import loading
 
 if TYPE_CHECKING:
     from sentence_transformers import SentenceTransformer

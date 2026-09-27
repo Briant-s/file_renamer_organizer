@@ -1,13 +1,27 @@
-from src.utils.gui.banners import welcome_banner, renaming_banner, clustering_banner
-from src.utils.gui.tempprompt import *
+# Force fully-offline operation. These must be set BEFORE huggingface_hub /
+# sentence_transformers are imported (transitively via the modules below), so
+# the library never attempts a network call to check for model updates.
+# The model is expected to already be in the local HF cache.
+import os
 
-from src.extractors.metadata import extract_contents
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
-from src.pipeline.with_clustering import get_folder_names, with_clustering_pipeline
+from tifo.ui.display.banners import welcome_banner, renaming_banner, clustering_banner
+from tifo.ui.prompts.main_menu import (
+    prompt_language,
+    prompt_main_path,
+    prompt_mode,
+    prompt_clustering_strat,
+)
 
-from src.utils.naming_formats import prompt_naming_format
-from src.pipeline.resources import load_resources
-from src.pipeline.no_clustering import renaming_pipeline
+from tifo.extractors.metadata import extract_contents
+
+from tifo.pipeline.with_clustering import get_folder_names, with_clustering_pipeline
+
+from tifo.naming.formats import prompt_naming_format
+from tifo.pipeline.resources import load_resources
+from tifo.pipeline.no_clustering import renaming_pipeline
 
 def run_app():
     welcome_banner()

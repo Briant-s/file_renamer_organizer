@@ -1,8 +1,8 @@
 from sentence_transformers import util
 
-from src.classifiers.base import Classifier
-from src.ai.expand_label import label_expander
-from src.ai.text_sampler import build_text_samples
+from tifo.classifiers.base import Classifier
+from tifo.embedding.expand_label import label_expander
+from tifo.embedding.text_sampler import build_text_samples
 
 
 def zscore_normalize(matrix):

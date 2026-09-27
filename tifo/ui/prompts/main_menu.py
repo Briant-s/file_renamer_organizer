@@ -1,7 +1,7 @@
 import questionary
 from rich.console import Console
 
-from src.utils.gui.reactions import select_reaction
+from tifo.ui.display.feedback import select_reaction
 
 console = Console()
 

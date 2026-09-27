@@ -1,9 +1,9 @@
 from pathlib import Path
 from datetime import datetime
 
-from src.extractors.pdf import *
-from src.extractors.docx import *
-from src.extractors.spreadsheet import *
+from tifo.extractors.pdf import *
+from tifo.extractors.docx import *
+from tifo.extractors.spreadsheet import *
 
 from rich.progress import track
 

@@ -6,16 +6,16 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 from pathlib import Path
 from datetime import datetime
 
-from src.extractors.metadata import *
-from src.ai.generator import *
-from src.utils.renamer import *
-from src.clustering_flow import *
-from src.ai.model import *
+from tifo.extractors.metadata import *
+from tifo.naming.generator import *
+from tifo.renaming.renamer import *
+from tifo.clustering_flow import *
+from tifo.embedding.model import *
 
 
 
-from src.pipeline.no_clustering import no_clustering_pipeline
-from src.pipeline.with_clustering import with_clustering_pipeline
+from tifo.pipeline.no_clustering import no_clustering_pipeline
+from tifo.pipeline.with_clustering import with_clustering_pipeline
 
 import questionary
 from rich.console import Console

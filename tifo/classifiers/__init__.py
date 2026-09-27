@@ -11,9 +11,9 @@ Only finished strategies are registered. ``auto_organize`` is not yet
 implemented and is intentionally omitted until ``AutoClassifier`` exists.
 """
 
-from src.classifiers.base import Classifier
-from src.classifiers.manual import ManualClassifier
-from src.classifiers.file_type import FileTypeClassifier
+from tifo.classifiers.base import Classifier
+from tifo.classifiers.manual import ManualClassifier
+from tifo.classifiers.file_type import FileTypeClassifier
 
 # Maps prompt_clustering_strat() values -> classifier class.
 CLASSIFIERS: dict[str, type[Classifier]] = {

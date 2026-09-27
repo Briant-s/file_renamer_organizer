@@ -2,14 +2,14 @@ import questionary
 from rich.console import Console
 from rich.panel import Panel
 
-from src.classifiers import CLASSIFIERS
-from src.clustering_flow import embedding_prep
-from src.pipeline.confirmation import preview_folders
-from src.pipeline.no_clustering import get_new_names
+from tifo.classifiers import CLASSIFIERS
+from tifo.clustering_flow import embedding_prep
+from tifo.pipeline.confirmation import preview_folders
+from tifo.pipeline.no_clustering import get_new_names
 
-from src.utils.renamer import move_flow, show_rename_results
-from src.utils.naming_formats import prompt_naming_format
-from src.utils.gui.prompts.rename import prompt_rename_option, prompt_rename_or_move
+from tifo.renaming.renamer import move_flow, show_rename_results
+from tifo.naming.formats import prompt_naming_format
+from tifo.ui.prompts.rename import prompt_rename_option, prompt_rename_or_move
 console = Console()
 
 def get_folder_names() -> list[str]:

@@ -1,4 +1,4 @@
-from src.classifiers.base import Classifier
+from tifo.classifiers.base import Classifier
 
 TEMP_EXT_MAP: dict[str, str] = {
     # Documents

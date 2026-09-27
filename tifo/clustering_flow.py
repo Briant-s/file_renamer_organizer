@@ -1,6 +1,6 @@
 from sentence_transformers import SentenceTransformer, util
-from src.ai.expand_label import *
-from src.ai.text_sampler import *
+from tifo.embedding.expand_label import *
+from tifo.embedding.text_sampler import *
 
 def get_folder_names() -> list[str]:
     folder_lists = []
