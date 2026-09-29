@@ -2,42 +2,43 @@
 
 # TiFo
 
-<div align="center">
-  <img src="demo/tifo.gif" width="800">
-</div>
+<img src="demo/tifo.gif" width="800" alt="TiFo demo">
 
 **Rename and organize your files by their actual content — locally, privately, offline.**
 
 </div>
 
-TiFo is a command-line tool that reads what your files are _about_ and gives them clean,
-descriptive names, then sorts them into folders that make sense. It runs entirely on your
+TiFo is a command-line tool that reads what your files are _about_, gives them clean,
+descriptive names, and sorts them into folders that make sense. It runs entirely on your
 machine using a local LLM (via [Ollama](https://ollama.com)) and local embeddings — no
 cloud, no API keys, nothing leaves your computer.
 
 Point it at a folder of messy files like `1.txt`, `report(final)(2).docx`, or `IMG_4821.pdf`,
 and get back `Weekly To-Do List.txt`, `Q3 Financial Summary.docx`, and a tidy folder tree.
 
-> [!NOTE]
-> TiFo works on **non-destructive copies by default** — your originals are never touched.
-> Organized files are written to a separate output directory so you can review before committing.
+> [!WARNING]
+> TiFo **renames and moves your files in place**. This is a destructive operation and
+> **cannot be undone**. You are shown a full preview and must confirm before anything
+> changes — but there is no automatic backup. Back up important folders, or try TiFo on a
+> copy first.
 
 ## Features
 
 - **Content-aware renaming** — extracts text from each file and asks a local LLM for a short,
   specific title (e.g. `Grocery Shopping List`, not `Text Document`).
-- **Multi-format extraction** — plain text, Markdown, CSV, logs, PDF, Word (`.docx`), and Excel (`.xlsx`).
-  Binary and unreadable files are handled gracefully.
+- **Multi-format extraction** — plain text, Markdown, CSV, logs, PDF, Word (`.docx`), and
+  Excel (`.xlsx`). Binary and unreadable files are handled gracefully.
 - **Two workflows** — rename files in place, or rename _and_ organize them into folders.
-- **Three folder strategies**:
-  - _Manual + semantic_ — you name the folders, TiFo places files using embedding similarity.
+- **Two folder strategies**:
+  - _Manual + semantic_ — you name the folders, TiFo places files by embedding similarity,
+    with guided prompts to help you pick effective folder names.
   - _By file type_ — sorts into `Documents`, `Images`, `Spreadsheets`, `Code`, and more.
-  - _Auto organize_ — planned, not yet available.
 - **Flexible naming formats** — `Title Case`, `snake_case`, `kebab-case`, `lowercase`,
   `UPPERCASE`, plus date-prefixed variants (`YYYY-MM-DD ...`).
-- **Preview before applying** — see a diff-style rename table or a folder tree, then accept or cancel.
+- **Preview before applying** — see a rename table or a folder tree, then accept or cancel.
+  After applying, TiFo tells you exactly where your files ended up.
 - **Safe by design** — collision-safe deduplication, an explicit `Unsorted` bucket for
-  low-confidence matches, and path-escape guards.
+  low-confidence matches, path-escape guards, and graceful `Ctrl+C` exit at any prompt.
 - **Cross-hardware** — CPU by default, with automatic fallback across CUDA → Apple MPS → CPU.
 
 ## How it works
@@ -61,7 +62,7 @@ and get back `Weekly To-Do List.txt`, `Q3 Financial Summary.docx`, and a tidy fo
   └───────┬───────┘
           │
           ▼
-  ┌───────────────┐    diff/tree preview → your confirmation → copy into place
+  ┌───────────────┐    table/tree preview → your confirmation → move into place
   │  Preview +    │
   │  Apply        │
   └───────────────┘
@@ -69,8 +70,9 @@ and get back `Weekly To-Do List.txt`, `Q3 Financial Summary.docx`, and a tidy fo
 
 - **Embeddings** use `sentence-transformers` with the `all-MiniLM-L6-v2` model.
 - **Naming and label expansion** use the `llama3.2:3b` model through Ollama.
-- For folder classification, labels are expanded into richer descriptions before embedding,
-  and low-confidence files (below threshold or with a close top-2 gap) are routed to `Unsorted`.
+- For folder classification, labels are expanded into richer descriptions before embedding.
+  A file is assigned only when its top match clears a confidence threshold _and_ beats the
+  runner-up by a margin; otherwise it is routed to `Unsorted`.
 
 ## Prerequisites
 
@@ -82,32 +84,47 @@ and get back `Weekly To-Do List.txt`, `Q3 Financial Summary.docx`, and a tidy fo
 ## Getting started
 
 ```bash
-# 1. Install dependencies (CPU wheels by default)
+# 1. Clone the stable branch
+git clone -b stable https://github.com/Briant-s/file_renamer_organizer.git
+cd file_renamer_organizer
+
+# 2. Install dependencies (CPU wheels by default)
 uv sync
 
-# 2. Pull the LLM model
+# 3. Pull the LLM model
 ollama pull llama3.2:3b
 
-# 3. Run
+# 4. Run
 uv run tifo
 ```
 
-Alternatively, install `tifo` as a standalone command you can run from anywhere:
+On first run, the embedding model (~90 MB) is downloaded and cached automatically.
+
+### Install as a global command
+
+To run `tifo` from anywhere on your machine, install it as a standalone tool:
 
 ```bash
-uv tool install .
+# Install the latest stable release directly from GitHub
+uv tool install "git+https://github.com/Briant-s/file_renamer_organizer.git@stable"
 ```
 
-This puts a `tifo` executable on your `PATH` (e.g. `~/.local/bin/tifo`). After changing
-the source, reinstall with `uv tool install . --force` to pick up your changes.
+This puts a `tifo` executable on your `PATH` (e.g. `~/.local/bin/tifo`). To pin an exact
+release instead of tracking the branch, use a tag:
 
-On first run, the embedding model (~90 MB) is downloaded and cached automatically.
+```bash
+uv tool install "git+https://github.com/Briant-s/file_renamer_organizer.git@v0.2.0"
+```
+
+> [!TIP]
+> Installing from a local clone works too: `uv tool install .`. After changing the source,
+> reinstall with `uv tool install . --force` to pick up your changes.
 
 > [!IMPORTANT]
 > **TiFo runs fully offline by default.** On startup it sets `HF_HUB_OFFLINE` and
 > `TRANSFORMERS_OFFLINE`, so the embedding model is loaded straight from the local
-> HuggingFace cache with no network check on every run. This means the two assets it
-> needs must be present locally first:
+> HuggingFace cache with no network check on every run. Two assets must be present locally
+> first:
 >
 > 1. The embedding model — cached automatically the first time you run TiFo _with_ a
 >    network connection, or seed it manually:
@@ -130,25 +147,31 @@ Running the tool starts an interactive prompt:
 
 1. **Choose a folder** to organize (tab-completion supported).
 2. **Pick a mode**:
-   - _Rename Files Only_ — clean up names, keep the folder layout.
+   - _Rename Files Only_ — clean up names, keep the existing folder layout.
    - _Rename + Folder Organization_ — also sort files into folders.
 3. **(Organize mode)** choose a folder strategy — manual names or by file type.
+   Manual mode guides you toward clear, distinct folder names for better matching.
 4. **Choose a naming format** — e.g. `Title Case` or `snake_case`.
 5. **Review the preview** — a rename table or a folder tree.
 6. **Confirm** — accept all, or cancel with no changes made.
+
+Press `Ctrl+C` at any prompt to exit cleanly with no changes.
 
 ### Rename preview example
 
 ```
                  Rename Preview
-┌──────────────────┬───┬───────────────────────────┐
-│ Original         │   │ New Name                  │
-├──────────────────┼───┼───────────────────────────┤
+┌──────────────────┬───┬────────────────────────────┐
+│ Original         │   │ New Name                   │
+├──────────────────┼───┼────────────────────────────┤
 │ 3.txt            │ → │ Passwords & Credentials.txt│
-│ 1.txt            │ → │ Weekly To-Do List.txt     │
-│ 8.pdf            │ → │ Q3 Financial Summary.pdf  │
-└──────────────────┴───┴───────────────────────────┘
+│ 1.txt            │ → │ Weekly To-Do List.txt      │
+│ 8.pdf            │ → │ Q3 Financial Summary.pdf   │
+└──────────────────┴───┴────────────────────────────┘
 ```
+
+In rename-only mode, files are renamed **where they already live** — a file in a subfolder
+stays in that subfolder.
 
 ### Folder organization preview example
 
@@ -164,6 +187,9 @@ Folder Organization Preview
 └── Unsorted  (1)
     └── app_idea_notes.txt
 ```
+
+Folders are created inside the directory you selected, and low-confidence files land in
+`Unsorted` rather than being forced into a poor match.
 
 ## Supported file types
 
@@ -183,13 +209,12 @@ Folder Organization Preview
 
 ```
 file_renamer/
-├── main.py                     # thin launcher (delegates to tifo.app)
-├── pyproject.toml              # defines the `tifo` entry point
+├── pyproject.toml              # dependencies + the `tifo` entry point
 └── tifo/
     ├── app.py                  # interactive entry point (forces offline HF mode)
-    ├── clustering_flow.py      # embedding prep + similarity helpers
     ├── common/
-    │   └── paths.py            # shared path helpers
+    │   ├── paths.py            # shared path helpers
+    │   └── util.py             # prompt guards (graceful Ctrl+C handling)
     ├── embedding/
     │   ├── model.py            # embedder loader (device autodetect, offline, fallback)
     │   ├── expand_label.py     # folder-label expansion for better matching
@@ -212,7 +237,7 @@ file_renamer/
     │   ├── confirmation.py     # folder-tree preview
     │   └── resources.py        # model/LLM warm-up
     ├── renaming/
-    │   └── renamer.py          # collision-safe copy/move/rename
+    │   └── renamer.py          # collision-safe move/rename
     └── ui/
         ├── display/            # banners, previews, feedback (rich)
         └── prompts/            # interactive prompts (questionary)
