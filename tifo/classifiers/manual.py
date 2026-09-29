@@ -64,7 +64,7 @@ class ManualClassifier(Classifier):
         # 3. Cosine similarity matrix; normalize for larger batches
         cosine_matrix = util.cos_sim(file_embeddings, folder_embeddings)
 
-        if len(pre_embed) >= self.MIN_FILES_FOR_NORMALIZE:
+        if num_folders >= 2 and len(pre_embed) >= self.MIN_FILES_FOR_NORMALIZE:
             matrix = zscore_normalize(cosine_matrix)
             z_threshold, z_gap = 1.0, 0.5
         else:
@@ -90,7 +90,7 @@ class ManualClassifier(Classifier):
                 raw_top = cosine_matrix[i][top_idx].item()
                 raw_second = cosine_matrix[i][top2.indices[1].item()].item()
 
-            gap_ok = (num_folders == 1) or ((top_z - second_z) < z_gap) 
+            gap_ok = (num_folders == 1) or ((top_z - second_z) >= z_gap) 
             if top_z < z_threshold or not gap_ok:
                 f["matching_folder"] = None
             else:

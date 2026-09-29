@@ -19,8 +19,13 @@ def get_folder_names() -> list[str]:
 
     console.print(
         Panel(
-            "Enter the folder names you want files sorted into.\n"
-            "Press [bold]Enter on an empty line[/bold] when you're done.",
+            "Name the folders to sort files into. TiFo matches each file to the "
+            "[bold]closest folder by meaning[/bold], so use [bold]specific, distinct[/bold] "
+            "labels ([green]Documentation[/green], [green]Task Lists[/green], "
+            "[green]Financial Reports[/green]) rather than vague ones "
+            "([red]Misc[/red], [red]Stuff[/red]). Add [bold]2+[/bold] folders; "
+            "low-confidence files go to [yellow]Unsorted[/yellow].\n"
+            "Press [bold]Enter on an empty line[/bold] when done.",
             title="Folder Setup",
             border_style="cyan",
         )
