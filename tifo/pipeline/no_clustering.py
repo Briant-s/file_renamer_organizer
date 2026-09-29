@@ -23,7 +23,7 @@ def get_new_names(raw_files: list[dict], formatter: callable, use_date: bool) ->
     return new_names
 
 
-def renaming_pipeline(*, formatter: callable, use_date: bool, raw_files: list[dict]):
+def renaming_pipeline(*, formatter: callable, use_date: bool, raw_files: list[dict], root_dir: str):
     # 3. Save for later comparison
     old_names = get_old_names(raw_files)
     
@@ -41,7 +41,7 @@ def renaming_pipeline(*, formatter: callable, use_date: bool, raw_files: list[di
         return
     elif user_actions == "accept":
         renamed, skipped, failed = rename_flow(raw_files, new_names)
-        show_rename_results(renamed, skipped, failed)
+        show_rename_results(renamed, skipped, failed, dest_root=root_dir)
         return
     elif user_actions == "manual":
         pass

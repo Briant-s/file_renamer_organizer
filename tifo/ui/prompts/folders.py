@@ -51,6 +51,19 @@ def get_folder_names() -> list[str]:
         folders.append(name)
         console.print(f"  [green]+[/green] {name}")
 
+    # Warn on a single folder: the classifier has nothing to compare against,
+    # so every file either lands in that one folder or falls to Unsorted.
+    if len(folders) == 1:
+        console.print(
+            Panel(
+                "You added only [bold]one folder[/bold]. With a single folder there's "
+                "nothing to compare against — files will either go into it or land in "
+                "[yellow]Unsorted[/yellow].",
+                title="⚠ Single folder",
+                border_style="yellow",
+            )
+        )
+
     if folders:
         console.print(
             Panel(

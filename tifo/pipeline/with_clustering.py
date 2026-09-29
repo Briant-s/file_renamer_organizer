@@ -29,7 +29,7 @@ def embedding_prep(raw_data_list: list[dict]) -> list[dict]:
     return pre_embed
 
 
-def with_clustering_pipeline(*, strat_choice, raw_files, folder_labels, res) -> None:
+def with_clustering_pipeline(*, strat_choice, raw_files, folder_labels, res, root_dir) -> None:
     # 1. Prep dicts for classification
     pre_embed = embedding_prep(raw_files)
     
@@ -68,5 +68,5 @@ def with_clustering_pipeline(*, strat_choice, raw_files, folder_labels, res) -> 
         new_names = [f["stem"] for f in results]
 
     # 7. Move (and optionally rename) each file into its matching_folder.
-    renamed, skipped, failed = move_flow(results, new_names)
-    show_rename_results(renamed, skipped, failed)
+    renamed, skipped, failed = move_flow(results, new_names, base_dir=root_dir)
+    show_rename_results(renamed, skipped, failed, dest_root=root_dir)

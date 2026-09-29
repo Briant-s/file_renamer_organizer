@@ -40,7 +40,7 @@ def _run():
         raw_files = extract_contents(root_path=DIR_PATH)
         res = load_resources(needs_embedder=False, needs_llm=True)
         
-        renaming_pipeline(formatter=formatter, use_date=use_date, raw_files=raw_files)
+        renaming_pipeline(formatter=formatter, use_date=use_date, raw_files=raw_files, root_dir=DIR_PATH)
         
     elif mode_choice == "clustering":
         strat_choice = require(prompt_clustering_strat())
@@ -58,7 +58,8 @@ def _run():
             strat_choice=strat_choice,
             raw_files=raw_files,
             folder_labels=manual_labels,
-            res=res
+            res=res,
+            root_dir=DIR_PATH
             )
 
 def run_app():

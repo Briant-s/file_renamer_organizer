@@ -44,6 +44,7 @@ class ManualClassifier(Classifier):
                 f["matching_folder"] = None
             return pre_embed
 
+        num_folders = len(folder_labels)
         # 0. Get sample context of the working directory
         sample_context = build_text_samples(files=pre_embed)
 
@@ -74,14 +75,23 @@ class ManualClassifier(Classifier):
         results = []
         for i, f in enumerate(pre_embed):
             scores = matrix[i]
-            top2 = scores.topk(2)
-            top_z, second_z = top2.values[0].item(), top2.values[1].item()
-            top_idx = top2.indices[0].item()
+            
+            if num_folders == 1:
+                top_z = scores[0].item()
+                second_z = float("-inf")
+                top_idx = 0
+                raw_top = cosine_matrix[i][0].item()
+                raw_second = None
+            else:
+                top2 = scores.topk(2)
+                top_z, second_z = top2.values[0].item(), top2.values[1].item()
+                top_idx = top2.indices[0].item()
 
-            raw_top = cosine_matrix[i][top_idx].item()
-            raw_second = cosine_matrix[i][top2.indices[1].item()].item()
+                raw_top = cosine_matrix[i][top_idx].item()
+                raw_second = cosine_matrix[i][top2.indices[1].item()].item()
 
-            if top_z < z_threshold or (top_z - second_z) < z_gap:
+            gap_ok = (num_folders == 1) or ((top_z - second_z) < z_gap) 
+            if top_z < z_threshold or not gap_ok:
                 f["matching_folder"] = None
             else:
                 f["matching_folder"] = folder_labels[top_idx]
@@ -89,7 +99,7 @@ class ManualClassifier(Classifier):
             f["top_score"] = raw_top
             f["second_score"] = raw_second
             f["top_z"] = top_z
-            f["gap_z"] = top_z - second_z
+            f["gap_z"] = None if num_folders == 1 else top_z - second_z
             results.append(f)
 
         return results

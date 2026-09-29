@@ -22,26 +22,12 @@ def place_file(
     src: str,
     new_stem: str,
     *,
-    base_dir: str = "copy_testing",
+    base_dir: str,
     subfolder: str | None = None,
 ) -> tuple[str, str]:
-    """Copy ``src`` into ``base_dir[/subfolder]`` under ``new_stem``.
-
-    This is the single file-placement primitive shared by both pipelines:
-    - no_clustering passes only ``base_dir`` (flat output)
-    - with_clustering passes ``subfolder`` = the file's ``matching_folder``
-      (which may itself be a nested, slash-separated relative path)
-
-    Folder creation is lazy + idempotent (``mkdir(parents=True)``), so nested
-    destinations like ``"Documents/Invoices/2026"`` work with no extra logic.
-    Name collisions are resolved by appending a counter: ``name (1)``, etc.
-    """
     source = Path(src)
     base = Path(base_dir)
 
-    # Resolve the destination folder and guard against path escapes (a stray
-    # ".." or leading "/" in an LLM/user-supplied folder must not write outside
-    # base_dir).
     dest_folder = base / subfolder if subfolder else base
     resolved_dest = dest_folder.resolve()
     if not resolved_dest.is_relative_to(base.resolve()):
@@ -60,8 +46,8 @@ def place_file(
         counter += 1
 
     try:
-        shutil.copy2(source, target)
-        return "success", target.name
+        shutil.move(str(source), str(target))
+        return "success", str(target)
     except FileNotFoundError:
         return "false", "ERROR! Source file doesn't exists"
     except PermissionError:
@@ -69,7 +55,7 @@ def place_file(
     except OSError as e:
         return "false", f"Operating System Error Occured: {e}"
 
-def show_rename_results(renamed, skipped, failed) -> None:
+def show_rename_results(renamed, skipped, failed, dest_root: str) -> None:
         console = Console()
         table = Table(title="Rename Results")
         
@@ -90,8 +76,13 @@ def show_rename_results(renamed, skipped, failed) -> None:
                 f"\n[yellow]{len(skipped)} files skipped, "
                 f"\n[red]{len(failed)} files failed[/red]."
         )
+        
+        if dest_root and renamed:
+            from pathlib import Path
+            console.print(f"\n[bold]Files are here:[/bold] {Path(dest_root).resolve()}")
 
-def rename_flow(original_files, new_names, *, base_dir: str = "copy_testing"):
+
+def rename_flow(original_files, new_names):
     """Flat rename (no folders). Skips files with no/unchanged name."""
     renamed = []
     skipped = []
@@ -108,7 +99,7 @@ def rename_flow(original_files, new_names, *, base_dir: str = "copy_testing"):
             skipped.append((old_name, "Name unchanged"))
             continue
 
-        success, reason = place_file(f["path"], new_name, base_dir=base_dir)
+        success, reason = place_file(f["path"], new_name, base_dir=f["parent_dir"])
 
         if success == "success":
             renamed.append((old_name, reason))
@@ -120,7 +111,7 @@ def rename_flow(original_files, new_names, *, base_dir: str = "copy_testing"):
     return renamed, skipped, failed
 
 
-def move_flow(original_files, new_names, *, base_dir: str = "copy_testing"):
+def move_flow(original_files, new_names, *, base_dir: str):
     """Move each file into its ``matching_folder`` (nested paths allowed).
 
     Unlike ``rename_flow``, the move ALWAYS happens even when the name is
@@ -145,7 +136,7 @@ def move_flow(original_files, new_names, *, base_dir: str = "copy_testing"):
         )
 
         if success == "success":
-            renamed.append((old_name, f"{subfolder}/{reason}"))
+            renamed.append((old_name, reason))
         elif success == "skipped":
             skipped.append((old_name, reason))
         else:
