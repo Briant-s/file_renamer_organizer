@@ -17,7 +17,7 @@ def prompt_rename_option(*, is_folder: bool):
         f"Apply Current {text}?",
         choices=[
             questionary.Choice(title="Accept All", value="accept"),
-            questionary.Choice(title="Individual Edit", value="manual"),
+            # questionary.Choice(title="Individual Edit", value="manual"),
             questionary.Choice(title="Cancel", value="cancel"),
         ],
         default="accept"

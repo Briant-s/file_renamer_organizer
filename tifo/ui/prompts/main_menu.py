@@ -13,7 +13,7 @@ def prompt_language():
         "Select Language",
         choices=[
             questionary.Choice(title="English (Default)", value="eng"),
-            questionary.Choice(title="Indonesian (NOT SET)", value="ind")    
+            # questionary.Choice(title="Indonesian (NOT SET)", value="ind")    
         ],
         default="eng",
         
@@ -46,7 +46,7 @@ def prompt_clustering_strat():
         choices= [ 
             questionary.Choice(title="Manually Write Folder Names", value="manual"),
             questionary.Choice(title="Organize by File Type", value="file_based"),
-            questionary.Choice(title="Auto Organize", value="auto_organize")
+            # questionary.Choice(title="Auto Organize", value="auto_organize")
         ]
     ).ask()
     select_reaction(strat_choice)

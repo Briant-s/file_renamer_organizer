@@ -1,7 +1,3 @@
-# Force fully-offline operation. These must be set BEFORE huggingface_hub /
-# sentence_transformers are imported (transitively via the modules below), so
-# the library never attempts a network call to check for model updates.
-# The model is expected to already be in the local HF cache.
 import os
 
 os.environ.setdefault("HF_HUB_OFFLINE", "1")

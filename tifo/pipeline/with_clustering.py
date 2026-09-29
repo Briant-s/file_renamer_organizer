@@ -3,14 +3,30 @@ from rich.console import Console
 from rich.panel import Panel
 
 from tifo.classifiers import CLASSIFIERS
-from tifo.clustering_flow import embedding_prep
 from tifo.pipeline.confirmation import preview_folders
 from tifo.pipeline.no_clustering import get_new_names
 
 from tifo.renaming.renamer import move_flow, show_rename_results
 from tifo.naming.formats import prompt_naming_format
 from tifo.ui.prompts.rename import prompt_rename_option, prompt_rename_or_move
+
 console = Console()
+
+def embedding_prep(raw_data_list: list[dict]) -> list[dict]:
+    pre_embed = [
+        {
+            "path": item["path"],                          # needed by place_file
+            "file_name": item["file_name"],
+            "stem": item.get("stem", item["file_name"]),  # kept for binary fallback
+            "file_type": item.get("file_type", ""),       # needed by FileTypeClassifier
+            "content": item["content"],
+            "created_at": item.get("created_at"),          # needed for dated names
+        }
+        for item in raw_data_list
+    ]
+    
+    return pre_embed
+
 
 def get_folder_names() -> list[str]:
     folders = []
