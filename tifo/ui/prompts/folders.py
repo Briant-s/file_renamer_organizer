@@ -35,13 +35,16 @@ def get_folder_names() -> list[str]:
 
         # questionary returns None on Ctrl+C / Esc
         if name is None:
-            break
+            raise KeyboardInterrupt
 
         name = name.strip()
         if not name:  # empty line => finished
             if not folders:
                 console.print("[yellow]No folders added yet.[/yellow]")
-                if not questionary.confirm("Finish without any folders?", default=False).ask():
+                confirm_no_folders = questionary.confirm("Finish without any folders?", default=False).ask() 
+                if confirm_no_folders is None:
+                    raise KeyboardInterrupt
+                elif not confirm_no_folders:
                     continue
             break
 

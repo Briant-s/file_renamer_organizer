@@ -9,6 +9,7 @@ from tifo.pipeline.no_clustering import get_new_names
 from tifo.renaming.renamer import move_flow, show_rename_results
 from tifo.naming.formats import prompt_naming_format
 from tifo.ui.prompts.rename import prompt_rename_option, prompt_rename_or_move
+from tifo.ui.prompts.folders import get_folder_names
 
 console = Console()
 
@@ -26,60 +27,6 @@ def embedding_prep(raw_data_list: list[dict]) -> list[dict]:
     ]
     
     return pre_embed
-
-
-def get_folder_names() -> list[str]:
-    folders = []
-
-    console.print(
-        Panel(
-            "Enter the folder names you want files sorted into.\n"
-            "Press [bold]Enter on an empty line[/bold] when you're done.",
-            title="Folder Setup",
-            border_style="cyan",
-        )
-    )
-
-    while True:
-        suffix = f"({len(folders)} added)" if folders else ""
-        name = questionary.text(
-            f"Folder name {suffix}",
-            validate=lambda text: _validate_folder(text, folders),
-        ).ask()
-
-        # questionary returns None on Ctrl+C / Esc
-        if name is None:
-            break
-
-        name = name.strip()
-        if not name:  # empty line => finished
-            if not folders:
-                console.print("[yellow]No folders added yet.[/yellow]")
-                if not questionary.confirm("Finish without any folders?", default=False).ask():
-                    continue
-            break
-
-        folders.append(name)
-        console.print(f"  [green]+[/green] {name}")
-
-    if folders:
-        console.print(
-            Panel(
-                "\n".join(f"[cyan]•[/cyan] {f}" for f in folders),
-                title=f"{len(folders)} Folder(s)",
-                border_style="green",
-            )
-        )
-    return folders
-
-
-def _validate_folder(text: str, existing: list[str]) -> bool | str:
-    stripped = text.strip()
-    if not stripped:
-        return True  # empty = finish signal, handled by caller
-    if stripped.lower() in (f.lower() for f in existing):
-        return f"'{stripped}' already added"
-    return True
 
 
 def with_clustering_pipeline(*, strat_choice, raw_files, folder_labels, res) -> None:
@@ -102,7 +49,7 @@ def with_clustering_pipeline(*, strat_choice, raw_files, folder_labels, res) -> 
     # 5. Ask folder confirmation
     user_actions = prompt_rename_option(is_folder=True)
 
-    if user_actions == "cancel":
+    if user_actions ==  "cancel":
         console.print("No changes were made.")
         return
     elif user_actions == "manual":

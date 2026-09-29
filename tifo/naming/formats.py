@@ -2,6 +2,7 @@ import re
 import questionary
 from datetime import datetime
 
+from tifo.common.util import require
 
 NAMING_FORMATS = {
     "Title Case":            lambda s: s.title(),
@@ -25,11 +26,12 @@ def prompt_naming_format() -> tuple[str, callable]:
         for label in NAMING_FORMATS
     ]
 
-    chosen_label = questionary.select(
+    chosen_label = require(questionary.select(
         "Choose a naming format:",
         choices=choices,
         default=choices[0],  # Title Case
-    ).ask()
+    ).ask())
+    
 
     return chosen_label, NAMING_FORMATS[chosen_label]
 

@@ -3,6 +3,10 @@ import os
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
+from rich.console import Console
+
+from tifo.common.util import require
+
 from tifo.ui.display.banners import welcome_banner, renaming_banner, clustering_banner
 from tifo.ui.prompts.main_menu import (
     prompt_language,
@@ -19,16 +23,17 @@ from tifo.naming.formats import prompt_naming_format
 from tifo.pipeline.resources import load_resources
 from tifo.pipeline.no_clustering import renaming_pipeline
 
-def run_app():
+
+def _run():
     welcome_banner()
-    language_chosen = prompt_language()
-    DIR_PATH = prompt_main_path()
-    mode_choice = prompt_mode()
+    language_chosen = require(prompt_language())
+    DIR_PATH = require(prompt_main_path())
+    mode_choice = require(prompt_mode())
     
     if mode_choice == "rename_only":
         renaming_banner(DIR_PATH)
         
-        label, formatter = prompt_naming_format()
+        label, formatter = require(prompt_naming_format())
         use_date = "YYYY-MM-DD" in label
         
         # loading
@@ -38,12 +43,12 @@ def run_app():
         renaming_pipeline(formatter=formatter, use_date=use_date, raw_files=raw_files)
         
     elif mode_choice == "clustering":
-        strat_choice = prompt_clustering_strat()
+        strat_choice = require(prompt_clustering_strat())
         clustering_banner(strat_choice, DIR_PATH)
         
         # if manual folder names
         manual_labels = get_folder_names() if "manual" in strat_choice else None
-        
+
         # loading
         raw_files = extract_contents(root_path=DIR_PATH)
         needs_ai = strat_choice in ("manual", "auto_organize")
@@ -54,7 +59,15 @@ def run_app():
             raw_files=raw_files,
             folder_labels=manual_labels,
             res=res
-        )
+            )
+
+def run_app():
+    try:
+        _run()
+    except KeyboardInterrupt:
+        Console().print("\n[dim]Exiting TiFo. No changes were made.[/dim]")
+        raise SystemExit(0)
+
     
     
 if __name__ == "__main__":
