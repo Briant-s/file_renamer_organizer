@@ -22,6 +22,7 @@ def embedding_prep(raw_data_list: list[dict]) -> list[dict]:
             "file_type": item.get("file_type", ""),       # needed by FileTypeClassifier
             "content": item["content"],
             "created_at": item.get("created_at"),          # needed for dated names
+            "metadata": item.get("metadata", {}),          # EXIF etc. for image naming
         }
         for item in raw_data_list
     ]

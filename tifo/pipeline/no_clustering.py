@@ -17,7 +17,15 @@ def get_new_names(raw_files: list[dict], formatter: callable, use_date: bool) ->
     new_names = []
     
     for f in track(raw_files, description="Generating file names..."):
-        new_name = generate_name(f["content"], f["file_name"], formatter, f["created_at"], use_date)
+        new_name = generate_name(
+            f["content"],
+            f["file_name"],
+            formatter,
+            f["created_at"],
+            use_date,
+            file_type=f.get("file_type"),
+            metadata=f.get("metadata"),
+        )
         new_names.append(new_name)
     
     return new_names
