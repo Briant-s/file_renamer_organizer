@@ -49,11 +49,18 @@ def _read_text_safe(entry: Path) -> tuple[str | None, bool]:
         return None, False
 
 
-def extract_contents(*, root_path: str) -> list[dict]:
+def extract_contents(*, root_path: str, show_progress: bool = True) -> list[dict]:
     root = Path(root_path)
     files_list = []
-    
-    for entry in track(root.rglob("*"), description="Reading files..."):
+
+    # ``show_progress`` controls the rich console bar. The CLI wants it; the
+    # Streamlit GUI does NOT — rich writes to stdout/stderr, which in the GUI
+    # just spams the terminal that launched the server. Pass ``False`` there.
+    entries = root.rglob("*")
+    if show_progress:
+        entries = track(entries, description="Reading files...")
+
+    for entry in entries:
         if entry.is_file():
             info = entry.stat()
             

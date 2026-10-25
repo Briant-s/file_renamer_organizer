@@ -37,6 +37,15 @@ explicit = true
 
 [project.scripts]
 tifo = "tifo.app:run_app"
+tifo-gui = "tifo.gui.launcher:main"
+
+[project.optional-dependencies]
+# Streamlit GUI frontend. Install with:  uv tool install 'file-renamer[gui]'
+gui = ["streamlit>=1.40"]
+
+[dependency-groups]
+# Dev-time install of the GUI stack:  uv sync --group gui
+gui = ["streamlit>=1.40"]
 
 [build-system]
 requires = ["hatchling"]
@@ -44,3 +53,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["tifo"]
+# Bundle GUI brand assets (logo/favicon images) into the wheel so `tifo-gui`
+# finds them after `uv tool install`. Python files are included automatically;
+# image/data files must be listed explicitly.
+artifacts = [
+    "tifo/gui/assets/*.png",
+    "tifo/gui/assets/*.svg",
+]

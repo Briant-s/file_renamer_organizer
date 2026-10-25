@@ -20,7 +20,7 @@ def _is_cached(model_name: str) -> bool:
     return (cache / slug).exists()
 
 
-def _try_load_on(device: str, status) -> "SentenceTransformer | None":
+def _try_load_on(device: str, status, *, quiet: bool = False) -> "SentenceTransformer | None":
     """Load the model on `device` and verify it with a real encode.
 
     Returns the working model instance, or None if the device is unusable
@@ -39,17 +39,35 @@ def _try_load_on(device: str, status) -> "SentenceTransformer | None":
             torch.cuda.synchronize()
         return model
     except Exception as e:
-        print(f"[device] '{device}' unavailable ({type(e).__name__}: {e})")
+        if not quiet:
+            print(f"[device] '{device}' unavailable ({type(e).__name__}: {e})")
         return None
 
 
-def load_embedder_model() -> "SentenceTransformer":
+class _NullStatus:
+    """No-op stand-in for rich's console.status (used in quiet mode)."""
+
+    def update(self, *_args, **_kwargs) -> None:
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_exc) -> None:
+        pass
+
+
+def load_embedder_model(*, quiet: bool = False) -> "SentenceTransformer":
     """Load the embedder on the best working device, falling back safely.
 
     Order: cuda (NVIDIA CUDA or AMD ROCm on Linux) -> mps (Apple) -> cpu.
     Each candidate is verified with a real encode before being accepted, so a
     machine that merely *claims* a device but fails the forward pass degrades
     to the next option instead of crashing.
+
+    ``quiet=True`` suppresses ALL console output (rich spinner + prints). The
+    Streamlit GUI uses this so model-loading status never leaks to the terminal
+    that launched the server; the CLI leaves it False for its live spinner.
 
     Imports (torch / sentence_transformers) are deferred to call time so that
     code paths which never need the embedder don't pay the multi-second import.
@@ -61,9 +79,27 @@ def load_embedder_model() -> "SentenceTransformer":
     import torch
     from rich.console import Console
 
-    console = Console()
+    console = Console(quiet=quiet)
 
-    with console.status("[cyan]Preparing embedder...[/cyan]", spinner="dots") as status:
+    # In quiet mode (GUI), also silence the tqdm "Loading weights" bar that
+    # transformers/safetensors print directly via tqdm — rich suppression alone
+    # doesn't cover it. HuggingFace honors this env var; set it before loading.
+    if quiet:
+        os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
+        try:
+            from transformers.utils import logging as _hf_logging
+
+            _hf_logging.disable_progress_bar()
+        except Exception:
+            pass
+
+    # In quiet mode use a no-op status so nothing renders; otherwise the real
+    # rich spinner. Both support .update()/context-manager, so the body is shared.
+    status_cm = _NullStatus() if quiet else console.status(
+        "[cyan]Preparing embedder...[/cyan]", spinner="dots"
+    )
+
+    with status_cm as status:
         status.update("[cyan]Detecting compute device...[/cyan]")
         candidates = []
         if torch.cuda.is_available():
@@ -87,10 +123,13 @@ def load_embedder_model() -> "SentenceTransformer":
 
         for device in candidates:
             status.update(f"[cyan]Trying device: {device}...[/cyan]")
-            model = _try_load_on(device, status)
+            model = _try_load_on(device, status, quiet=quiet)
             if model is not None:
                 _model = model
-                console.print(f"[green]✓[/green] Embedder loaded on [bold]{device}[/bold]")
+                if not quiet:
+                    console.print(
+                        f"[green]✓[/green] Embedder loaded on [bold]{device}[/bold]"
+                    )
                 return _model
 
     # cpu should always succeed; if it didn't, surface the real error

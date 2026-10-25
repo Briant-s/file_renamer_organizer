@@ -1,3 +1,4 @@
+from contextlib import nullcontext
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -13,7 +14,7 @@ class Resources:
     embedder: "SentenceTransformer | None" = None
     llm_ready: bool = False
 
-def warm_llm(model: str) -> bool:
+def warm_llm(model: str, *, quiet: bool = False) -> bool:
     try: 
         from ollama import chat
         chat(model=model, 
@@ -25,7 +26,8 @@ def warm_llm(model: str) -> bool:
         )
         return True
     except Exception as e:
-        print(f"[LLM] not ready: {type(e).__name__}: {e}")
+        if not quiet:
+            print(f"[LLM] not ready: {type(e).__name__}: {e}")
         return False
     
     
@@ -50,17 +52,19 @@ def run_test(device: str = "cpu") -> None:
     print(f"first encode:     {time.perf_counter() - t:.2f}s")
 
 
-def load_resources(*, needs_embedder: bool, needs_llm: bool, llm_model: str = "llama3.2:3b") -> None:
+def load_resources(*, needs_embedder: bool, needs_llm: bool, llm_model: str = "llama3.2:3b", quiet: bool = False) -> None:
     res = Resources()
     
     if needs_embedder:
         # load_embedder_model owns its own detailed status spinner,
         # so we must NOT wrap it in loading(...) — nested console.status conflicts.
-        res.embedder = load_embedder_model()
+        res.embedder = load_embedder_model(quiet=quiet)
     
     if needs_llm:
-        with loading("Warming up LLM..."):
-            res.llm_ready = warm_llm(llm_model) 
+        # quiet mode (GUI) suppresses the terminal spinner entirely.
+        spinner = nullcontext() if quiet else loading("Warming up LLM...")
+        with spinner:
+            res.llm_ready = warm_llm(llm_model, quiet=quiet)
             
     return res
 
