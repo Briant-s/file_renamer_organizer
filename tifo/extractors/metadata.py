@@ -4,6 +4,9 @@ from datetime import datetime
 from tifo.extractors.pdf import *
 from tifo.extractors.docx import *
 from tifo.extractors.spreadsheet import *
+from tifo.extractors.pptx import *
+from tifo.extractors.archive import *
+from tifo.extractors.image import *
 
 from rich.progress import track
 
@@ -23,6 +26,16 @@ BINARY_EXTENSIONS = {
     ".exe", ".dll", ".so", ".bin", ".pyc", ".class",
 }
 
+# Archive formats we can describe via member listing (stdlib zipfile/tarfile,
+# plus .7z when the optional py7zr package is installed).
+# .rar needs an external system binary, so it stays filename-only.
+ARCHIVE_EXTENSIONS = {".zip", ".tar", ".gz", ".tgz", ".bz2", ".xz", ".7z"}
+
+# Image formats we can describe via EXIF metadata (date / device / GPS).
+# Pillow reads EXIF from JPEG/TIFF/WebP/HEIF; PNGs rarely carry it and simply
+# fall back to filename-only naming. .heic/.heif need pillow-heif to decode.
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".tiff", ".tif", ".webp", ".png", ".heic", ".heif"}
+
 def _read_text_safe(entry: Path) -> tuple[str | None, bool]:
     if entry.suffix.lower() in BINARY_EXTENSIONS:
         return None, True
@@ -36,11 +49,18 @@ def _read_text_safe(entry: Path) -> tuple[str | None, bool]:
         return None, False
 
 
-def extract_contents(*, root_path: str) -> list[dict]:
+def extract_contents(*, root_path: str, show_progress: bool = True) -> list[dict]:
     root = Path(root_path)
     files_list = []
-    
-    for entry in track(root.rglob("*"), description="Reading files..."):
+
+    # ``show_progress`` controls the rich console bar. The CLI wants it; the
+    # Streamlit GUI does NOT — rich writes to stdout/stderr, which in the GUI
+    # just spams the terminal that launched the server. Pass ``False`` there.
+    entries = root.rglob("*")
+    if show_progress:
+        entries = track(entries, description="Reading files...")
+
+    for entry in entries:
         if entry.is_file():
             info = entry.stat()
             
@@ -58,6 +78,21 @@ def extract_contents(*, root_path: str) -> list[dict]:
                 is_binary = True
             elif file_suffix == ".xlsx":
                 result = extract_xlsx(entry)
+                content = result.content
+                extra_metadata = result.metadata
+                is_binary = True
+            elif file_suffix == ".pptx":
+                result = extract_pptx(entry)
+                content = result.content
+                extra_metadata = result.metadata
+                is_binary = True
+            elif file_suffix in ARCHIVE_EXTENSIONS:
+                result = extract_archive(entry)
+                content = result.content
+                extra_metadata = result.metadata
+                is_binary = True
+            elif file_suffix in IMAGE_EXTENSIONS:
+                result = extract_image(entry)
                 content = result.content
                 extra_metadata = result.metadata
                 is_binary = True

@@ -2,11 +2,13 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from tifo.config import EMBED_MODEL
+
 if TYPE_CHECKING:
     from sentence_transformers import SentenceTransformer
 
 _model = None
-MODEL_NAME = "all-MiniLM-L6-v2"
+MODEL_NAME = EMBED_MODEL
 
 
 def _is_cached(model_name: str) -> bool:
@@ -20,12 +22,7 @@ def _is_cached(model_name: str) -> bool:
     return (cache / slug).exists()
 
 
-def _try_load_on(device: str, status) -> "SentenceTransformer | None":
-    """Load the model on `device` and verify it with a real encode.
-
-    Returns the working model instance, or None if the device is unusable
-    (e.g. CUDA build present but no usable GPU, broken driver, unsupported op).
-    """
+def _try_load_on(device: str, status, *, quiet: bool = False) -> "SentenceTransformer | None":
     import torch
     from sentence_transformers import SentenceTransformer
 
@@ -39,21 +36,25 @@ def _try_load_on(device: str, status) -> "SentenceTransformer | None":
             torch.cuda.synchronize()
         return model
     except Exception as e:
-        print(f"[device] '{device}' unavailable ({type(e).__name__}: {e})")
+        if not quiet:
+            print(f"[device] '{device}' unavailable ({type(e).__name__}: {e})")
         return None
 
 
-def load_embedder_model() -> "SentenceTransformer":
-    """Load the embedder on the best working device, falling back safely.
+class _NullStatus:
+    """No-op stand-in for rich's console.status (used in quiet mode)."""
 
-    Order: cuda (NVIDIA CUDA or AMD ROCm on Linux) -> mps (Apple) -> cpu.
-    Each candidate is verified with a real encode before being accepted, so a
-    machine that merely *claims* a device but fails the forward pass degrades
-    to the next option instead of crashing.
+    def update(self, *_args, **_kwargs) -> None:
+        pass
 
-    Imports (torch / sentence_transformers) are deferred to call time so that
-    code paths which never need the embedder don't pay the multi-second import.
-    """
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_exc) -> None:
+        pass
+
+
+def load_embedder_model(*, quiet: bool = False) -> "SentenceTransformer":
     global _model
     if _model is not None:
         return _model
@@ -61,9 +62,24 @@ def load_embedder_model() -> "SentenceTransformer":
     import torch
     from rich.console import Console
 
-    console = Console()
+    console = Console(quiet=quiet)
 
-    with console.status("[cyan]Preparing embedder...[/cyan]", spinner="dots") as status:
+    if quiet:
+        os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
+        try:
+            from transformers.utils import logging as _hf_logging
+
+            _hf_logging.disable_progress_bar()
+        except Exception:
+            pass
+
+    # In quiet mode use a no-op status so nothing renders; otherwise the real
+    # rich spinner. Both support .update()/context-manager, so the body is shared.
+    status_cm = _NullStatus() if quiet else console.status(
+        "[cyan]Preparing embedder...[/cyan]", spinner="dots"
+    )
+
+    with status_cm as status:
         status.update("[cyan]Detecting compute device...[/cyan]")
         candidates = []
         if torch.cuda.is_available():
@@ -73,9 +89,6 @@ def load_embedder_model() -> "SentenceTransformer":
         candidates.append("cpu")
 
         if not _is_cached(MODEL_NAME):
-            # We run fully offline (HF_HUB_OFFLINE=1), so a missing cache cannot
-            # be recovered by downloading. Fail early with an actionable message
-            # instead of letting SentenceTransformer raise an opaque network error.
             raise RuntimeError(
                 f"Embedding model '{MODEL_NAME}' is not in the local HuggingFace cache "
                 f"and TiFo runs offline. Pull it once while online with:\n\n"
@@ -87,10 +100,13 @@ def load_embedder_model() -> "SentenceTransformer":
 
         for device in candidates:
             status.update(f"[cyan]Trying device: {device}...[/cyan]")
-            model = _try_load_on(device, status)
+            model = _try_load_on(device, status, quiet=quiet)
             if model is not None:
                 _model = model
-                console.print(f"[green]✓[/green] Embedder loaded on [bold]{device}[/bold]")
+                if not quiet:
+                    console.print(
+                        f"[green]✓[/green] Embedder loaded on [bold]{device}[/bold]"
+                    )
                 return _model
 
     # cpu should always succeed; if it didn't, surface the real error

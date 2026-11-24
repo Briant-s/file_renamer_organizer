@@ -1,0 +1,21 @@
+# TiFo Streamlit GUI configuration.
+#
+# fileWatcherType = "none" disables Streamlit's auto-reload watcher, which would
+# otherwise introspect `transformers` and trigger a wall of harmless
+# "ModuleNotFoundError: No module named 'torchvision'" tracebacks (TiFo is CPU/
+# text-only and does not install torchvision). This applies when running either
+# via the `tifo-gui` launcher or `streamlit run tifo/gui/streamlit_app.py`.
+[server]
+fileWatcherType = "none"
+
+[browser]
+gatherUsageStats = false
+
+
+[theme]
+base = "light"
+primaryColor = "#0f6e56"          # TiFo green — buttons, active widgets, accents
+backgroundColor = "#f1efe8"       # main canvas
+secondaryBackgroundColor = "#ffffff"  # cards, inputs, sidebar
+textColor = "#2c2c2a"
+font = "sans-serif"

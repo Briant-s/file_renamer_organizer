@@ -32,6 +32,9 @@ DISTRIBUTION_STRATEGY.md
 SESSION.md
 DEPLOY_TODO.md
 markdowns/
+notebooks/
+Evaluation/
+temp1/
 
 
 # Model/cache artifacts (large, machine-specific)

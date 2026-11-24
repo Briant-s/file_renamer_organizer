@@ -1,26 +1,20 @@
-from pathlib import Path
+"""Backward-compatible naming entry point.
+
+The naming logic now lives in a strategy router (see router.py / strategies.py /
+name_request.py). This module keeps the original `generate_name(...)` function
+signature so existing callers and tests keep working, while delegating to the
+router. New code can use `tifo.naming.router.default_router` directly.
+"""
+
 from datetime import datetime
-from pydantic import BaseModel
-from ollama import chat
 
+from tifo.naming.name_request import NameRequest
+from tifo.naming.router import default_router
 
-class FileMetaData(BaseModel):
-    topic: str
-    date: str | None = None  # YYYY-MM-DD if found in content, else None
-
-
-def _resolve_date(ai_date: str | None, created_at: datetime | None) -> str:
-    """
-    Priority:
-    1. Date extracted from content by the LLM
-    2. File creation date from filesystem
-    3. Today's date as last resort
-    """
-    if ai_date:
-        return ai_date
-    if created_at:
-        return created_at.strftime("%Y-%m-%d")
-    return datetime.now().strftime("%Y-%m-%d")
+# Re-exported for any code importing these from here historically.
+from tifo.naming.strategies import FileMetaData, IMAGE_SUFFIXES  # noqa: F401
+from tifo.naming.name_request import clean_stem as _clean_stem  # noqa: F401
+from tifo.naming.name_request import resolve_date as _resolve_date  # noqa: F401
 
 
 def generate_name(
@@ -29,47 +23,28 @@ def generate_name(
     formatter: callable,
     created_at: datetime | None = None,
     use_date: bool = False,
+    file_type: str | None = None,
+    metadata: dict | None = None,
 ) -> str:
-    suffix = Path(original_file).suffix
-    truncated = " ".join(extracted_text.split())[:1000] if extracted_text else ""
+    """Generate a file name by routing to the appropriate naming strategy.
 
-    date_instruction = (
-        "- If the content mentions a specific date (e.g. invoice date, report date, meeting date), "
-        "extract it as YYYY-MM-DD and return it in the date field. Otherwise return null.\n"
-        if use_date else
-        "- Set date to null.\n"
+    Thin wrapper: builds a NameRequest and hands it to the router. Kept for
+    backward compatibility with the original positional signature.
+    """
+    req = NameRequest(
+        original_file=original_file,
+        formatter=formatter,
+        content=extracted_text,
+        file_type=file_type,
+        created_at=created_at,
+        use_date=use_date,
+        metadata=metadata or {},
     )
-
-    prompt = (
-        f"Read the file content below and return a short descriptive title (2-4 words) "
-        f"that describes what the file is about.\n\n"
-        f"Rules:\n"
-        f"- Return only the title words, no extension, no punctuation, no explanation\n"
-        f"- Be specific, not generic (e.g. 'Grocery Shopping List' not 'Text Document')\n"
-        f"{date_instruction}"
-        f"\nContent:\n{truncated}"
-    )
-
-    result = chat(
-        model="llama3.2:3b",
-        messages=[{"role": "user", "content": prompt}],
-        format=FileMetaData.model_json_schema(),
-        options={"temperature": 0}
-    )
-
-    ai_response = FileMetaData.model_validate_json(result.message.content)
-    formatted = formatter(ai_response.topic)
-
-    if use_date:
-        date_str = _resolve_date(ai_response.date, created_at)
-        return f"{date_str} {formatted}{suffix}"
-
-    return f"{formatted}{suffix}"
+    return default_router.name(req)
 
 
 if __name__ == "__main__":
     import re
-    from datetime import datetime
 
     formatters = {
         "Title Case": lambda s: s.title(),
@@ -83,49 +58,36 @@ if __name__ == "__main__":
             "format": "Title Case",
             "use_date": True,
             "created_at": datetime(2024, 3, 15),
-            "content": """
-                Invoice Date: 2024-03-15
-                Client: Acme Corp
-                Services: Web development, UI design
-                Total Due: $3,200
-            """
-        },
-        {
-            "file": "notes.txt",
-            "format": "snake_case",
-            "use_date": True,
-            "created_at": datetime(2026, 9, 8),
-            "content": """
-                Meeting notes - product sync
-                Attendees: Brian, Jess, Tom
-                - Finalize onboarding flow by Friday
-                - API rate limiting needs review
-            """
+            "content": "Invoice Date: 2024-03-15\nClient: Acme Corp\nTotal Due: $3,200",
         },
         {
             "file": "report.pdf",
             "format": "Title Case",
             "use_date": False,
             "created_at": None,
-            "content": """
-                Q3 Financial Summary
-                Total Revenue: $1,250,000
-                Net Profit: $410,000
-            """
+            "content": "Q3 Financial Summary\nTotal Revenue: $1,250,000\nNet Profit: $410,000",
+        },
+        {
+            "file": "DSC_4115.acr_.jpeg",
+            "format": "Title Case",
+            "use_date": False,
+            "created_at": None,
+            "content": None,
+            "file_type": ".jpeg",
+            "metadata": {"device": "NIKON CORPORATION NIKON Z 8",
+                         "dimensions": {"width": 8256, "height": 5504}},
         },
     ]
 
     for case in test_cases:
         formatter = formatters[case["format"]]
-        print(f"\nOriginal  : {case['file']}")
-        print(f"Format    : {case['format']}")
-        print(f"Use date  : {case['use_date']}")
         result = generate_name(
-            extracted_text=case["content"],
+            extracted_text=case.get("content"),
             original_file=case["file"],
             formatter=formatter,
-            created_at=case["created_at"],
+            created_at=case.get("created_at"),
             use_date=case["use_date"],
+            file_type=case.get("file_type"),
+            metadata=case.get("metadata"),
         )
-        print(f"Result    : {result}")
-        print("-" * 40)
+        print(f"{case['file']:<24} -> {result}")

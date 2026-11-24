@@ -1,0 +1,29 @@
+# TiFo Streamlit GUI configuration (packaged copy).
+#
+# This file ships INSIDE the `tifo` wheel so the GUI keeps its theme after a
+# global `uv tool install`. The launcher (tifo/gui/launcher.py) points Streamlit
+# at this file via the STREAMLIT_CONFIG_FILE env var, because Streamlit only
+# auto-discovers `.streamlit/config.toml` relative to the current working
+# directory — which is not reliable for an installed console script.
+#
+# Keep this in sync with the repo-root `.streamlit/config.toml` used during
+# local `streamlit run` development.
+#
+# fileWatcherType = "none" disables Streamlit's auto-reload watcher, which would
+# otherwise introspect `transformers` and trigger a wall of harmless
+# "ModuleNotFoundError: No module named 'torchvision'" tracebacks (TiFo is CPU/
+# text-only and does not install torchvision).
+[server]
+fileWatcherType = "none"
+
+[browser]
+gatherUsageStats = false
+
+
+[theme]
+base = "light"
+primaryColor = "#0f6e56"          # TiFo green — buttons, active widgets, accents
+backgroundColor = "#f1efe8"       # main canvas
+secondaryBackgroundColor = "#ffffff"  # cards, inputs, sidebar
+textColor = "#2c2c2a"
+font = "sans-serif"
