@@ -24,9 +24,22 @@ from tifo.naming.formats import prompt_naming_format
 from tifo.pipeline.resources import load_resources
 from tifo.pipeline.no_clustering import renaming_pipeline
 
+from tifo.setup import ensure_embedder, setup_complete
+
 
 def _run():
     welcome_banner()
+
+    # First-run setup: the app runs offline, so the embedding model must be in
+    # the local cache before any mode loads it. On a fresh install we download
+    # it once (needs network); later runs skip this via the setup marker.
+    if not setup_complete():
+        if not ensure_embedder():
+            Console().print(
+                "[red]Setup is required before TiFo can run. Exiting.[/red]"
+            )
+            raise SystemExit(1)
+
     language_chosen = require(prompt_language())
     DIR_PATH = require(prompt_main_path())
     mode_choice = require(prompt_mode())

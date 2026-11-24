@@ -1,6 +1,6 @@
 [project]
 name = "file-renamer"
-version = "0.3.1"
+version = "0.3.2"
 description = "TiFo — rename and organize files by their content, locally and offline."
 readme = "README.md"
 requires-python = ">=3.13"
@@ -43,6 +43,7 @@ explicit = true
 [project.scripts]
 tifo = "tifo.app:run_app"
 tifo-gui = "tifo.gui.launcher:main"
+tifo-setup = "tifo.setup.embedder:run_setup"
 
 [project.optional-dependencies]
 # Streamlit GUI frontend. Install with:  uv tool install 'file-renamer[gui]'

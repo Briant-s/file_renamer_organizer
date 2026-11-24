@@ -68,6 +68,41 @@ def _asset(name: str) -> str | None:
 _FAVICON = _asset("favicon.png") or _asset("logo_small.png") or "📁"
 st.set_page_config(page_title="TiFo", page_icon=_FAVICON, layout="centered")
 
+
+# --------------------------------------------------------------------------- #
+# First-run setup (embedding model download)
+# --------------------------------------------------------------------------- #
+# The app runs offline, so the embedding model must be cached before any mode
+# loads it. The ``tifo-gui`` launcher already runs setup, but the module
+# docstring also documents launching directly with
+# ``streamlit run tifo/gui/streamlit_app.py`` — that path skips the launcher,
+# so we guard here too. Rendered as Streamlit UI (not a terminal spinner) and
+# cached across reruns so the download is attempted at most once per session.
+@st.cache_resource(show_spinner=False)
+def _ensure_setup() -> bool:
+    from tifo.setup import ensure_embedder, setup_complete
+
+    if setup_complete():
+        return True
+    # quiet=True: suppress the rich terminal spinner (it would print to the
+    # server console, not the browser); we show a Streamlit spinner instead.
+    return ensure_embedder(quiet=True)
+
+
+with st.spinner(
+    "First-time setup: downloading the embedding model. This runs once and "
+    "needs an internet connection; later runs are fully offline."
+):
+    _setup_ok = _ensure_setup()
+
+if not _setup_ok:
+    st.error(
+        "TiFo could not download the embedding model it needs to run. "
+        "Check your internet connection, then reload this page. You can also "
+        "run `tifo-setup` in a terminal while online to prepare it."
+    )
+    st.stop()
+
 # Persistent logo in the top-left / sidebar (Streamlit >= 1.35). Only call it
 # when a logo file is actually present so we don't error on a bare checkout.
 _LOGO = _asset("logo.png") or _asset("logo.svg")

@@ -62,6 +62,15 @@ tifo-gui    # GUI
 uv tool upgrade file-renamer
 ```
 
+The **first run downloads a small embedding model** (needs internet, once).
+TiFo does this automatically before the first `tifo` / `tifo-gui` session and
+then runs fully offline. To pull it ahead of time — e.g. before going offline —
+run it explicitly:
+
+```bash
+tifo-setup
+```
+
 ## Usage
 
 Running the tool starts an interactive prompt:
