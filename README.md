@@ -57,6 +57,9 @@ uv tool install "git+https://github.com/Briant-s/file_renamer_organizer.git@stab
 # 4. Run
 tifo        # CLI
 tifo-gui    # GUI
+
+# 5. Update
+uv tool upgrade file-renamer
 ```
 
 ## Usage
