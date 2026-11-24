@@ -59,6 +59,19 @@ def main() -> None:
             "Then launch the GUI again with:  tifo-gui"
         )
 
+    # First-run setup before handing off to Streamlit. The embedding model must
+    # be cached up front because the app runs offline; do it here while a
+    # terminal is still attached for the download spinner, not inside the
+    # Streamlit subprocess where that output would be lost.
+    from tifo.setup import ensure_embedder, setup_complete
+
+    if not setup_complete():
+        if not ensure_embedder():
+            raise SystemExit(
+                "TiFo setup is required before the GUI can run. "
+                "Run `tifo-setup` once while online, then try again."
+            )
+
     app_path = Path(__file__).resolve().parent / "streamlit_app.py"
     # Streamlit reads its target from argv, same as `streamlit run <app>`.
     #

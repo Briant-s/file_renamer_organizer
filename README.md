@@ -57,6 +57,18 @@ uv tool install "git+https://github.com/Briant-s/file_renamer_organizer.git@stab
 # 4. Run
 tifo        # CLI
 tifo-gui    # GUI
+
+# 5. Update
+uv tool upgrade file-renamer
+```
+
+The **first run downloads a small embedding model** (needs internet, once).
+TiFo does this automatically before the first `tifo` / `tifo-gui` session and
+then runs fully offline. To pull it ahead of time — e.g. before going offline —
+run it explicitly:
+
+```bash
+tifo-setup
 ```
 
 ## Usage
