@@ -1,6 +1,6 @@
 [project]
 name = "file-renamer"
-version = "0.3.0"
+version = "0.3.1"
 description = "TiFo — rename and organize files by their content, locally and offline."
 readme = "README.md"
 requires-python = ">=3.13"

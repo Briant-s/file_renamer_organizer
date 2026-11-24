@@ -664,7 +664,7 @@ wheels = [
 
 [[package]]
 name = "file-renamer"
-version = "0.3.0"
+version = "0.3.1"
 source = { editable = "." }
 dependencies = [
     { name = "docx2txt" },
