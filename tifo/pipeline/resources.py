@@ -2,6 +2,7 @@ from contextlib import nullcontext
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from tifo.config import EMBED_MODEL, LLM_MODEL
 from tifo.embedding.model import load_embedder_model
 from tifo.ui.display.feedback import loading
 
@@ -30,6 +31,10 @@ def warm_llm(model: str, *, quiet: bool = False) -> bool:
             print(f"[LLM] not ready: {type(e).__name__}: {e}")
         return False
     
+# def warm_umap(*, quiet: bool = False) -> bool:
+        
+
+
     
 def run_test(device: str = "cpu") -> None:
     """Measure where embedder load time goes: imports vs weights vs first encode."""
@@ -44,7 +49,7 @@ def run_test(device: str = "cpu") -> None:
     print(f"ST import:        {time.perf_counter() - t:.2f}s")
 
     t = time.perf_counter()
-    m = SentenceTransformer("all-MiniLM-L6-v2", device=device)
+    m = SentenceTransformer(EMBED_MODEL, device=device)
     print(f"model load ({device}): {time.perf_counter() - t:.2f}s")
 
     t = time.perf_counter()
@@ -52,7 +57,7 @@ def run_test(device: str = "cpu") -> None:
     print(f"first encode:     {time.perf_counter() - t:.2f}s")
 
 
-def load_resources(*, needs_embedder: bool, needs_llm: bool, llm_model: str = "llama3.2:3b", quiet: bool = False) -> None:
+def load_resources(*, needs_embedder: bool, needs_llm: bool, llm_model: str = LLM_MODEL, quiet: bool = False) -> None:
     res = Resources()
     
     if needs_embedder:

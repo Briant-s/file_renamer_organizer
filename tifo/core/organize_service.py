@@ -50,21 +50,32 @@ def plan_organization(
     folder_labels: list[str] | None,
     embedder,
     root_dir: str,
+    on_status: Callable[[str], None] | None = None,
 ) -> OrganizePlan:
     """Classify files into folders without touching the filesystem.
 
     ``embedder`` is only required for the ``manual`` strategy; pass ``None`` for
     ``file_based``. ``folder_labels`` likewise applies to ``manual`` only.
+
+    ``on_status`` is an optional ``(message: str) -> None`` hook used by the
+    ``auto_organize`` strategy to narrate its heavy steps (embedding,
+    clustering, LLM naming). Ignored by the other strategies.
     """
     pre_embed = embedding_prep(raw_files)
 
     cls = CLASSIFIERS[strat_choice]
     if strat_choice == "manual":
         classifier = cls(model=embedder, folder_labels=folder_labels)
+        results = classifier.classify(pre_embed=pre_embed)
+    elif strat_choice == "auto_organize":
+        from ollama import Client
+
+        classifier = cls(embedder=embedder, client=Client(timeout=60.0))
+        results = classifier.classify(pre_embed=pre_embed, on_status=on_status)
     else:
         classifier = cls()
+        results = classifier.classify(pre_embed=pre_embed)
 
-    results = classifier.classify(pre_embed=pre_embed)
     return OrganizePlan(results=results, root_dir=root_dir)
 
 

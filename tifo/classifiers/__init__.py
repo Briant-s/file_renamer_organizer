@@ -14,16 +14,19 @@ implemented and is intentionally omitted until ``AutoClassifier`` exists.
 from tifo.classifiers.base import Classifier
 from tifo.classifiers.manual import ManualClassifier
 from tifo.classifiers.file_type import FileTypeClassifier
+from tifo.classifiers.auto import AutoClassifier
 
 # Maps prompt_clustering_strat() values -> classifier class.
 CLASSIFIERS: dict[str, type[Classifier]] = {
     "manual": ManualClassifier,
     "file_based": FileTypeClassifier,
+    "auto_organize": AutoClassifier,
 }
 
 __all__ = [
     "Classifier",
     "ManualClassifier",
     "FileTypeClassifier",
+    "AutoClassifier",
     "CLASSIFIERS",
 ]

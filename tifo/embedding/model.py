@@ -2,11 +2,13 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from tifo.config import EMBED_MODEL
+
 if TYPE_CHECKING:
     from sentence_transformers import SentenceTransformer
 
 _model = None
-MODEL_NAME = "all-MiniLM-L6-v2"
+MODEL_NAME = EMBED_MODEL
 
 
 def _is_cached(model_name: str) -> bool:
@@ -21,11 +23,6 @@ def _is_cached(model_name: str) -> bool:
 
 
 def _try_load_on(device: str, status, *, quiet: bool = False) -> "SentenceTransformer | None":
-    """Load the model on `device` and verify it with a real encode.
-
-    Returns the working model instance, or None if the device is unusable
-    (e.g. CUDA build present but no usable GPU, broken driver, unsupported op).
-    """
     import torch
     from sentence_transformers import SentenceTransformer
 
@@ -58,20 +55,6 @@ class _NullStatus:
 
 
 def load_embedder_model(*, quiet: bool = False) -> "SentenceTransformer":
-    """Load the embedder on the best working device, falling back safely.
-
-    Order: cuda (NVIDIA CUDA or AMD ROCm on Linux) -> mps (Apple) -> cpu.
-    Each candidate is verified with a real encode before being accepted, so a
-    machine that merely *claims* a device but fails the forward pass degrades
-    to the next option instead of crashing.
-
-    ``quiet=True`` suppresses ALL console output (rich spinner + prints). The
-    Streamlit GUI uses this so model-loading status never leaks to the terminal
-    that launched the server; the CLI leaves it False for its live spinner.
-
-    Imports (torch / sentence_transformers) are deferred to call time so that
-    code paths which never need the embedder don't pay the multi-second import.
-    """
     global _model
     if _model is not None:
         return _model
@@ -81,9 +64,6 @@ def load_embedder_model(*, quiet: bool = False) -> "SentenceTransformer":
 
     console = Console(quiet=quiet)
 
-    # In quiet mode (GUI), also silence the tqdm "Loading weights" bar that
-    # transformers/safetensors print directly via tqdm — rich suppression alone
-    # doesn't cover it. HuggingFace honors this env var; set it before loading.
     if quiet:
         os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
         try:
@@ -109,9 +89,6 @@ def load_embedder_model(*, quiet: bool = False) -> "SentenceTransformer":
         candidates.append("cpu")
 
         if not _is_cached(MODEL_NAME):
-            # We run fully offline (HF_HUB_OFFLINE=1), so a missing cache cannot
-            # be recovered by downloading. Fail early with an actionable message
-            # instead of letting SentenceTransformer raise an opaque network error.
             raise RuntimeError(
                 f"Embedding model '{MODEL_NAME}' is not in the local HuggingFace cache "
                 f"and TiFo runs offline. Pull it once while online with:\n\n"

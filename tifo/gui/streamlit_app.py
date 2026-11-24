@@ -48,6 +48,7 @@ from tifo.core.organize_service import (
     plan_organization,
     resolve_target_names,
 )
+from tifo.renaming.renamer import find_empty_dirs, prune_empty_dirs
 
 # --------------------------------------------------------------------------- #
 # Brand assets (logo + favicon)
@@ -338,11 +339,29 @@ elif _on("format") and st.session_state.get("mode") == "rename_only":
         format_func=lambda lbl: f"{lbl}  →  '{NAMING_FORMATS[lbl](example)}'",
         label_visibility="collapsed",
     )
+
+    st.markdown("**How should files be named?**")
+    name_mode = st.radio(
+        "Naming source",
+        options=["reformat", "describe"],
+        format_func=lambda m: (
+            "Reformat existing names (instant, no AI)" if m == "reformat"
+            else "Describe from content (AI reads each file, slower)"
+        ),
+        label_visibility="collapsed",
+    )
+    st.caption(
+        "Reformat just restyles the names already on disk. Describe reads each "
+        "file's content with the local AI to generate a new name — slower, "
+        "especially for many files."
+    )
+
     col_back, col_next = st.columns(2)
     if col_back.button("Back"):
         _go("mode")
     if col_next.button("Continue", type="primary"):
         st.session_state.fmt_label = fmt_label
+        st.session_state.describe = (name_mode == "describe")
         # No heavy work here — the summary/confirm step owns extraction + load.
         _go("confirm")
 
@@ -354,10 +373,12 @@ elif _on("strategy"):
     st.subheader("Select folder strategy")
     strat = st.radio(
         "Strategy",
-        options=["manual", "file_based"],
-        format_func=lambda s: (
-            "Manually Write Folder Names" if s == "manual" else "Organize by File Type"
-        ),
+        options=["manual", "file_based", "auto_organize"],
+        format_func=lambda s: {
+            "manual": "Manually Write Folder Names",
+            "file_based": "Organize by File Type",
+            "auto_organize": "Auto Organize",
+        }[s],
         label_visibility="collapsed",
     )
     col_back, _spacer, col_next = st.columns([1, 4, 1])
@@ -436,9 +457,11 @@ elif _on("confirm"):
         back_target = "format"
     else:
         strat = st.session_state.get("strat_choice")
-        strat_label = (
-            "Manually Write Folder Names" if strat == "manual" else "Organize by File Type"
-        )
+        strat_label = {
+            "manual": "Manually Write Folder Names",
+            "file_based": "Organize by File Type",
+            "auto_organize": "Auto Organize",
+        }.get(strat, strat)
         st.markdown(
             f"**Mode:** Rename + folder organization  \n"
             f"**Folder strategy:** {strat_label}"
@@ -459,23 +482,33 @@ elif _on("confirm"):
         _go(back_target)
     if col_next.button("Start", type="primary"):
         if mode == "rename_only":
-            with st.spinner("Extracting file contents..."):
+            fmt_label = st.session_state.get("fmt_label")
+            describe = st.session_state.get("describe", True)
+            with st.status("Extracting file contents...", expanded=True) as status_box:
                 raw_files = extract_contents(
                     root_path=folder, show_progress=False
                 )
-                load_resources(needs_embedder=False, needs_llm=True, quiet=True)
-            fmt_label = st.session_state.get("fmt_label")
-            plan = plan_renames(
-                formatter=NAMING_FORMATS[fmt_label],
-                use_date="YYYY-MM-DD" in fmt_label,
-                raw_files=raw_files,
-                on_progress=_progress_callback("Generating file names"),
-            )
+                # Only load the LLM when we actually describe from content.
+                load_resources(needs_embedder=False, needs_llm=describe, quiet=True)
+
+                def _rename_progress(done: int, total: int) -> None:
+                    status_box.update(
+                        label=f"Generating file names ({done}/{total})"
+                    )
+
+                plan = plan_renames(
+                    formatter=NAMING_FORMATS[fmt_label],
+                    use_date="YYYY-MM-DD" in fmt_label,
+                    raw_files=raw_files,
+                    describe=describe,
+                    on_progress=_rename_progress,
+                )
+                status_box.update(label="Done", state="complete")
             st.session_state.rename_plan = plan
         else:
             strat = st.session_state.strat_choice
-            needs_ai = strat == "manual"
-            with st.spinner("Extracting file contents and classifying..."):
+            needs_ai = strat in ("manual", "auto_organize")
+            with st.status("Extracting file contents...", expanded=True) as status_box:
                 raw_files = extract_contents(root_path=folder, show_progress=False)
                 res = load_resources(needs_embedder=needs_ai, needs_llm=needs_ai, quiet=True)
                 plan = plan_organization(
@@ -484,9 +517,11 @@ elif _on("confirm"):
                     folder_labels=st.session_state.get("folder_labels"),
                     embedder=res.embedder,
                     root_dir=folder,
+                    on_status=lambda msg: status_box.update(label=msg),
                 )
+                status_box.update(label="Done", state="complete")
             st.session_state.organize_plan = plan
-        _go("preview")
+        _go("preview")  # both rename-only and organize advance to preview
 
 
 # --------------------------------------------------------------------------- #
@@ -603,5 +638,40 @@ elif _on("results"):
     st.subheader("Rename Results")
     _show_outcome(st.session_state.outcome)
     st.caption(f"Files are here: {Path(st.session_state.folder).resolve()}")
+
+    # Offer to clean up folders left empty by organizing (opt-in, non-silent).
+    # Only relevant to the organize flow; rename-only never moves files.
+    if st.session_state.get("mode") == "clustering" and not st.session_state.get("pruned"):
+        folder = st.session_state.folder
+        empties = find_empty_dirs(folder)
+        if empties:
+            st.divider()
+            st.warning(
+                f"Organizing left **{len(empties)}** empty folder(s) behind. "
+                "They are empty — removing them deletes nothing but the folders "
+                "themselves.",
+                icon="🗂️",
+            )
+            with st.expander("Show empty folders"):
+                for d in empties:
+                    st.write(f"• {Path(d).name}")
+            choice = st.radio(
+                "Remove these empty folders?",
+                options=["accept", "skip"],
+                format_func=lambda c: (
+                    "Accept — delete empty folders" if c == "accept"
+                    else "No — I'll do it myself"
+                ),
+                label_visibility="collapsed",
+            )
+            if st.button("Apply", key="prune_apply"):
+                if choice == "accept":
+                    removed = prune_empty_dirs(folder)
+                    st.success(f"Removed {len(removed)} empty folder(s).")
+                else:
+                    st.info("Left the empty folders in place.")
+                st.session_state.pruned = True
+                st.rerun()
+
     if st.button("Start over", type="primary"):
         _restart()

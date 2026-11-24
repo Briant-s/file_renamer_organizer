@@ -13,6 +13,7 @@ from tifo.ui.prompts.main_menu import (
     prompt_main_path,
     prompt_mode,
     prompt_clustering_strat,
+    prompt_describe_or_reformat,
 )
 
 from tifo.extractors.metadata import extract_contents
@@ -35,12 +36,15 @@ def _run():
         
         label, formatter = require(prompt_naming_format())
         use_date = "YYYY-MM-DD" in label
-        
-        # loading
+
+        # Ask whether to describe from content (LLM) or just reformat names.
+        describe = prompt_describe_or_reformat()
+
+        # loading — only warm the LLM when we actually describe from content.
         raw_files = extract_contents(root_path=DIR_PATH)
-        res = load_resources(needs_embedder=False, needs_llm=True)
-        
-        renaming_pipeline(formatter=formatter, use_date=use_date, raw_files=raw_files, root_dir=DIR_PATH)
+        res = load_resources(needs_embedder=False, needs_llm=describe)
+
+        renaming_pipeline(formatter=formatter, use_date=use_date, describe=describe, raw_files=raw_files, root_dir=DIR_PATH)
         
     elif mode_choice == "clustering":
         strat_choice = require(prompt_clustering_strat())

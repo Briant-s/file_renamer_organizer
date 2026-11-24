@@ -3,9 +3,13 @@ from rich.console import Console
 from tifo.pipeline.confirmation import preview_folders
 from tifo.pipeline.no_clustering import get_new_names
 
-from tifo.renaming.renamer import show_rename_results
+from tifo.renaming.renamer import show_rename_results, find_empty_dirs, prune_empty_dirs
 from tifo.naming.formats import prompt_naming_format
-from tifo.ui.prompts.rename import prompt_rename_option, prompt_rename_or_move
+from tifo.ui.prompts.rename import (
+    prompt_rename_option,
+    prompt_rename_or_move,
+    prompt_prune_empty_dirs,
+)
 from tifo.ui.prompts.folders import get_folder_names
 
 from tifo.core.organize_service import (
@@ -18,13 +22,17 @@ console = Console()
 
 def with_clustering_pipeline(*, strat_choice, raw_files, folder_labels, res, root_dir) -> None:
     # 1-3. Classify files into folders (pure core logic).
-    plan = plan_organization(
-        strat_choice=strat_choice,
-        raw_files=raw_files,
-        folder_labels=folder_labels,
-        embedder=res.embedder,
-        root_dir=root_dir,
-    )
+    # Narrate the heavy auto-organize steps via a live spinner. The hook is a
+    # no-op for manual/file_based (they never call on_status).
+    with console.status("[cyan]Classifying files...[/cyan]", spinner="dots") as _status:
+        plan = plan_organization(
+            strat_choice=strat_choice,
+            raw_files=raw_files,
+            folder_labels=folder_labels,
+            embedder=res.embedder,
+            root_dir=root_dir,
+            on_status=lambda msg: _status.update(f"[cyan]{msg}[/cyan]"),
+        )
 
     # 4. Preview tree
     preview_folders(matching_results=plan.results)
@@ -55,3 +63,9 @@ def with_clustering_pipeline(*, strat_choice, raw_files, folder_labels, res, roo
     show_rename_results(
         outcome.renamed, outcome.skipped, outcome.failed, dest_root=root_dir
     )
+
+    # 8. Offer to clean up folders left empty by the moves (opt-in, non-silent).
+    empties = find_empty_dirs(root_dir)
+    if empties and prompt_prune_empty_dirs(empties):
+        removed = prune_empty_dirs(root_dir)
+        console.print(f"[green]Removed {len(removed)} empty folder(s).[/green]")

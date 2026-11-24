@@ -7,6 +7,53 @@ from rich.console import Console
 from rich.table import Table
 
 
+def find_empty_dirs(base_dir: str) -> list[Path]:
+    """Return subdirectories under base_dir that are now strictly empty.
+
+    Deepest first, so a parent is reported only after its children — a dir that
+    becomes empty solely because its empty children will be removed is caught in
+    the same pass. Never includes base_dir itself. Pure inspection: deletes
+    nothing. Used to preview the cleanup before the user confirms.
+    """
+    base = Path(base_dir).resolve()
+    empties: list[Path] = []
+    known_empty: set[Path] = set()
+
+    for d in sorted(base.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+        if not d.is_dir():
+            continue
+        rd = d.resolve()
+        if rd == base:
+            continue
+        # A dir counts as empty if every child is itself slated for removal.
+        children = list(d.iterdir())
+        if all(c.resolve() in known_empty for c in children):
+            empties.append(d)
+            known_empty.add(rd)
+    return empties
+
+
+def prune_empty_dirs(base_dir: str) -> list[str]:
+    """Remove now-empty subdirectories under base_dir, deepest first.
+
+    Destructive, but safe: ``rmdir`` only succeeds on a truly empty directory,
+    so no file is ever at risk. Never removes base_dir itself. Returns the paths
+    actually removed. Call only after the user has confirmed (see the preview
+    from :func:`find_empty_dirs`).
+    """
+    base = Path(base_dir).resolve()
+    removed: list[str] = []
+
+    for d in sorted(base.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+        if d.is_dir() and d.resolve() != base:
+            try:
+                d.rmdir()          # fails if not empty — that is the safety net
+                removed.append(str(d))
+            except OSError:
+                pass               # not empty / permission / race — skip quietly
+    return removed
+
+
 def ask_rename_option() -> bool:
         choices = ["Accept All", "Individual Edit", "Cancel"]
         

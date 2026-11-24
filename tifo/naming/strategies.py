@@ -13,11 +13,12 @@ else needs to change.
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import Callable, Protocol, runtime_checkable
 
 from ollama import chat
 from pydantic import BaseModel
 
+from tifo.config import LLM_MODEL, RENAME_MODEL, PROPERTIES # re-exported for strategies in this module
 from tifo.naming.name_request import NameRequest, clean_stem, finalize
 
 
@@ -28,7 +29,19 @@ class FileMetaData(BaseModel):
     date: str | None = None  # YYYY-MM-DD if found in content, else None
 
 
-LLM_MODEL = "llama3.2:3b"
+class BatchItem(BaseModel):
+    """One file's result inside a batch response. ``id`` echoes the input id so
+    results are joined by id, never by list position."""
+
+    id: int
+    topic: str
+    date: str | None = None  # YYYY-MM-DD if found in content, else None
+
+
+class BatchResult(BaseModel):
+    results: list[BatchItem]
+
+
 MAX_CONTENT_CHARS = 1000
 
 # Image suffixes handled by the EXIF-aware deterministic strategy.
@@ -121,7 +134,7 @@ class LLMTextNameStrategy:
             model=LLM_MODEL,
             messages=[{"role": "user", "content": prompt}],
             format=FileMetaData.model_json_schema(),
-            options={"temperature": 0},
+            options=PROPERTIES
         )
         ai = FileMetaData.model_validate_json(result.message.content)
         return finalize(ai.topic, req, explicit_date=ai.date)
@@ -142,3 +155,91 @@ class FilenameNameStrategy:
 
     def generate(self, req: NameRequest) -> str:
         return finalize(clean_stem(req.original_file), req)
+
+
+# --- batched descriptive naming (LLM) --------------------------------------
+
+# Batching sends several files' content in one chat() call to cut per-call
+# overhead (prompt-eval + round-trip) for folders with many text files.
+# Accuracy is preserved by: stable integer ids echoed back (join by id, not
+# order), a per-item JSON schema, a small chunk size, and single-file fallback
+# for any id the model fails to return.
+BATCH_SIZE = 4
+BATCH_CONTENT_CHARS = 500  # tighter than MAX_CONTENT_CHARS to fit many per prompt
+
+
+def name_batch(
+    reqs: list[NameRequest],
+    *,
+    chunk_size: int = BATCH_SIZE,
+    on_chunk: Callable[[int], None] | None = None,
+) -> dict[int, str]:
+    """Name many descriptive-text files in grouped LLM calls.
+
+    Returns ``{index_in_reqs: final_name}``. Any file the batch fails to return
+    is simply absent from the result — the caller falls back to single-file
+    naming for those ids. ``reqs`` must be LLM-eligible (real content); route
+    images/empty files through their deterministic strategies instead.
+    """
+    out: dict[int, str] = {}
+    done = 0
+
+    for start in range(0, len(reqs), chunk_size):
+        chunk = reqs[start : start + chunk_size]
+
+        lines: list[str] = []
+        for offset, r in enumerate(chunk):
+            gid = start + offset
+            snippet = " ".join((r.content or "").split())[:BATCH_CONTENT_CHARS]
+            lines.append(f"[id {gid}] filename: {r.original_file}\n{snippet}")
+
+        prompt = (
+            "For EACH numbered file below, return a short descriptive title "
+            "(2-4 words) describing what that file is about.\n\n"
+            "Rules:\n"
+            "- Echo back the SAME id for each file.\n"
+            "- Base each title ONLY on that file's own content — do not mix files.\n"
+            "- Return only title words: no extension, no punctuation, no explanation.\n"
+            "- Be specific, not generic (e.g. 'Grocery Shopping List' not 'Text Document').\n"
+            "- If a file mentions a specific date (invoice/report/meeting), extract it as "
+            "YYYY-MM-DD in that item's date field; otherwise null.\n\n"
+            "Files:\n" + "\n\n".join(lines)
+        )
+
+        # num_predict must scale with the number of files or the JSON truncates
+        # mid-array and the tail items are lost. num_ctx must fit the chunk.
+        batch_options = {
+            **PROPERTIES,
+            "num_predict":  24 * len(chunk),
+            "num_ctx": max(PROPERTIES.get("num_ctx", 2048), 1024 + 400 * len(chunk)),
+        }
+
+        try:
+            resp = chat(
+                model=RENAME_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                format=BatchResult.model_json_schema(),
+                options=batch_options,
+                keep_alive="10m"
+            )
+            parsed = BatchResult.model_validate_json(resp.message.content)
+        except Exception:
+            # Whole-chunk failure: leave these ids unset so the caller falls back.
+            done += len(chunk)
+            if on_chunk is not None:
+                on_chunk(done)
+            continue
+
+        by_id = {item.id: item for item in parsed.results}
+        for offset, r in enumerate(chunk):
+            gid = start + offset
+            item = by_id.get(gid)
+            if item is None or not item.topic.strip():
+                continue  # missing/empty -> caller handles via single-file fallback
+            out[gid] = finalize(item.topic, r, explicit_date=item.date)
+
+        done += len(chunk)
+        if on_chunk is not None:
+            on_chunk(done)
+
+    return out

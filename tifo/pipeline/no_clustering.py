@@ -15,12 +15,13 @@ def get_old_names(raw_files: list[dict]) -> list[str]:
     return [f["file_name"] for f in raw_files]
 
 
-def get_new_names(raw_files: list[dict], formatter: callable, use_date: bool) -> list[str]:
+def get_new_names(raw_files: list[dict], formatter: callable, use_date: bool, describe: bool = True) -> list[str]:
     """CLI name generation: pure core logic + a rich progress bar.
 
     The core owns the LLM loop (``generate_new_names``); this wrapper only
     renders progress via the core's ``on_progress`` hook, keeping all
-    presentation in the CLI layer.
+    presentation in the CLI layer. ``describe=False`` reformats existing names
+    with no LLM call.
     """
     with Progress() as progress:
         task = progress.add_task("Generating file names...", total=len(raw_files))
@@ -29,15 +30,15 @@ def get_new_names(raw_files: list[dict], formatter: callable, use_date: bool) ->
             progress.update(task, completed=done)
 
         return generate_new_names(
-            raw_files, formatter, use_date, on_progress=_advance
+            raw_files, formatter, use_date, describe=describe, on_progress=_advance
         )
 
 
-def renaming_pipeline(*, formatter: callable, use_date: bool, raw_files: list[dict], root_dir: str):
-    # Build the rename plan (generates new names with a progress bar).
+def renaming_pipeline(*, formatter: callable, use_date: bool, raw_files: list[dict], root_dir: str, describe: bool = True):
+    # Build the rename plan. describe=False skips the LLM (reformat only).
     plan = RenamePlan(
         old_names=get_old_names(raw_files),
-        new_names=get_new_names(raw_files, formatter, use_date),
+        new_names=get_new_names(raw_files, formatter, use_date, describe=describe),
         raw_files=raw_files,
     )
 

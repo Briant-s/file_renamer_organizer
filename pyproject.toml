@@ -1,12 +1,14 @@
 [project]
 name = "file-renamer"
-version = "0.2.0"
+version = "0.3.0"
 description = "TiFo — rename and organize files by their content, locally and offline."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "docx2txt>=0.9",
+    "hdbscan>=0.8.44",
     "huggingface-hub>=1.30.0",
+    "matplotlib>=3.11.2",
     "ollama>=0.6.2",
     "openpyxl>=3.1.5",
     "pathlib>=1.0.1",
@@ -18,6 +20,7 @@ dependencies = [
     "rich>=15.0.0",
     "sentence-transformers>=6.0.1",
     "torch>=2.4",
+    "umap-learn>=0.6.0",
 ]
 
 # Default: CPU wheels everywhere. Safe on AMD, NVIDIA-without-setup, and mac (MPS ships in the CPU wheel).
@@ -46,6 +49,10 @@ gui = ["streamlit>=1.40"]
 [dependency-groups]
 # Dev-time install of the GUI stack:  uv sync --group gui
 gui = ["streamlit>=1.40"]
+notebook = [
+    "ipykernel>=7.4.0",
+    "jupyterlab>=4.6.6",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -53,10 +60,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["tifo"]
-# Bundle GUI brand assets (logo/favicon images) into the wheel so `tifo-gui`
-# finds them after `uv tool install`. Python files are included automatically;
-# image/data files must be listed explicitly.
 artifacts = [
     "tifo/gui/assets/*.png",
     "tifo/gui/assets/*.svg",
+    "tifo/gui/streamlit_config.toml",
 ]
