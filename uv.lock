@@ -664,7 +664,7 @@ wheels = [
 
 [[package]]
 name = "file-renamer"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "docx2txt" },
@@ -673,7 +673,8 @@ dependencies = [
     { name = "matplotlib" },
     { name = "ollama" },
     { name = "openpyxl" },
-    { name = "pathlib" },
+    { name = "pandas" },
+    { name = "pillow" },
     { name = "py7zr" },
     { name = "pydantic" },
     { name = "pymupdf" },
@@ -681,6 +682,7 @@ dependencies = [
     { name = "questionary" },
     { name = "rich" },
     { name = "sentence-transformers" },
+    { name = "streamlit" },
     { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
     { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
     { name = "umap-learn" },
@@ -692,6 +694,10 @@ gui = [
 ]
 
 [package.dev-dependencies]
+dev = [
+    { name = "ipykernel" },
+    { name = "jupyterlab" },
+]
 gui = [
     { name = "streamlit" },
 ]
@@ -708,7 +714,8 @@ requires-dist = [
     { name = "matplotlib", specifier = ">=3.11.2" },
     { name = "ollama", specifier = ">=0.6.2" },
     { name = "openpyxl", specifier = ">=3.1.5" },
-    { name = "pathlib", specifier = ">=1.0.1" },
+    { name = "pandas", specifier = ">=3.1.0" },
+    { name = "pillow", specifier = ">=13.0.0" },
     { name = "py7zr", specifier = ">=1.1.4" },
     { name = "pydantic", specifier = ">=2.13.5" },
     { name = "pymupdf", specifier = ">=1.28.2" },
@@ -716,6 +723,7 @@ requires-dist = [
     { name = "questionary", specifier = ">=2.1.1" },
     { name = "rich", specifier = ">=15.0.0" },
     { name = "sentence-transformers", specifier = ">=6.0.1" },
+    { name = "streamlit", specifier = ">=1.66.1" },
     { name = "streamlit", marker = "extra == 'gui'", specifier = ">=1.40" },
     { name = "torch", specifier = ">=2.4", index = "https://download.pytorch.org/whl/cpu" },
     { name = "umap-learn", specifier = ">=0.6.0" },
@@ -723,6 +731,10 @@ requires-dist = [
 provides-extras = ["gui"]
 
 [package.metadata.requires-dev]
+dev = [
+    { name = "ipykernel", specifier = ">=7.4.0" },
+    { name = "jupyterlab", specifier = ">=4.6.6" },
+]
 gui = [{ name = "streamlit", specifier = ">=1.40" }]
 notebook = [
     { name = "ipykernel", specifier = ">=7.4.0" },
@@ -1974,15 +1986,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/30/4b/90c937815137d43ce71ba043cd3566221e9df6b9c805f24b5d138c9d40a7/parso-0.8.7.tar.gz", hash = "sha256:eaaac4c9fdd5e9e8852dc778d2d7405897ec510f2a298071453e5e3a07914bb1", size = 401824, upload-time = "2026-05-01T23:13:02.138Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/99/5d/8268b644392ee874ee82a635cd0df1773de230bde356c38de28e298392cc/parso-0.8.7-py2.py3-none-any.whl", hash = "sha256:a8926eb2a1b915486941fdbd31e86a4baf88fe8c210f25f2f35ecec5b574ca1c", size = 107025, upload-time = "2026-05-01T23:12:58.867Z" },
-]
-
-[[package]]
-name = "pathlib"
-version = "1.0.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ac/aa/9b065a76b9af472437a0059f77e8f962fe350438b927cb80184c32f075eb/pathlib-1.0.1.tar.gz", hash = "sha256:6940718dfc3eff4258203ad5021090933e5c04707d5ca8cc9e73c94a7894ea9f", size = 49298, upload-time = "2014-09-03T15:41:57.18Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/78/f9/690a8600b93c332de3ab4a344a4ac34f00c8f104917061f779db6a918ed6/pathlib-1.0.1-py3-none-any.whl", hash = "sha256:f35f95ab8b0f59e6d354090350b44a80a80635d22efdedfa84c7ad1cf0a74147", size = 14363, upload-time = "2022-05-04T13:37:20.585Z" },
 ]
 
 [[package]]
